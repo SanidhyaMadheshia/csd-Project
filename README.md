@@ -1,141 +1,73 @@
-# Q-EVM (Quantum-Resistant Account Abstraction Layer) — Phase 1
+# Q-EVM — Quantum-Resistant Account Abstraction (Research Prototype)
 
+Q-EVM explores a **forkless** path to post-quantum account abstraction on Ethereum by combining ERC-4337-style user operations with zkVM proofs for ML-DSA (Dilithium) verification.
 
+This repository contains a production-quality Rust workspace implementing the research architecture described in `researchaPaper.pdf`.
 
-## Block Level Diagram 
+## Architecture Snapshot
 
 ```
-+-------------------+
-|      USER         |
-| (Wallet / DApp)   |
-+---------+---------+
-          |
-          | 1. Create Transaction
-          | + ML-DSA Signature
-          v
-+--------------------------+
-|   USER OPERATION (ERC-4337) |
-| sender | nonce | calldata |
-| signature (ML-DSA)        |
-+------------+-------------+
-             |
-             | 2. Submit to Bundler
-             v
-+------------------------------+
-|     OFF-CHAIN BUNDLER        |
-|  (Rust Implementation)       |
-|------------------------------|
-| - Validate UserOperation     |
-| - Verify ML-DSA Signature    |
-| - Maintain Mempool           |
-+------------+-----------------+
-             |
-             | 3. Forward Valid Ops
-             v
-+------------------------------+
-|       zkVM PROVER            |
-|   (SP1 / RISC Zero)          |
-|------------------------------|
-| - Execute verification logic |
-| - Generate ZK Proof          |
-|   (Proof of correct signature|
-|    & state transition)       |
-+------------+-----------------+
-             |
-             | 4. Submit Proof
-             v
-================ ON-CHAIN =================
-
-+--------------------------------------+
-|   SMART CONTRACT WALLET (Solidity)   |
-|--------------------------------------|
-| - Verify ZK Proof (cheap gas)        |
-| - Validate transaction               |
-| - Update state                      |
-+----------------+---------------------+
-                 |
-                 | 5. Execute Tx
-                 v
-+------------------------------+
-|        ETHEREUM NETWORK      |
-|   (L1 / L2 - Sepolia etc.)   |
-+------------------------------+
-
-=========================================
+User -> Bundler (Rust) -> zkVM (RISC Zero / SP1) -> Smart Wallet (Solidity)
 ```
 
+The bundler produces zkVM receipts that prove ML-DSA signature validity, allowing the on-chain wallet to verify succinct proofs instead of expensive lattice verification.
 
-Rust prototype that:
+## Workspace Layout
 
-- Generates ML-DSA (CRYSTALS-Dilithium) keypairs
-- Signs and verifies messages (ML-DSA + ECDSA)
-- Simulates a basic ERC-4337-inspired `UserOperation` bundler (ML-DSA validation)
-- Benchmarks performance vs ECDSA
-
-## Project Layout
-
-```text
-./Cargo.toml
-./qevm-core/
-  Cargo.toml
-  src/
-    main.rs
-    lib.rs
-    crypto/
-    bundler/
-    benchmark/
+```
+/crates
+  core        Node orchestration, benchmarks, events
+  types       Protocol types and hashes
+  crypto      ML-DSA + ECDSA wrappers
+  bundler     Mempool + batching + validation pipeline
+  zkvm        zkVM abstraction (dev-mode prover)
+  network     Local network transport interfaces
+  storage     Mempool + receipt persistence
+  rpc         Axum-based API server
+  cli         CLI demo tooling
+  web-ui      Axum-backed demo dashboard
+  telemetry   Tracing + metrics
+  utils       Hashing + helpers
 ```
 
-### Build
+## Build
 
 ```bash
-cd /home/sanidhya/bitcoin/csd-project
 cargo build
+cargo test
+cargo bench -p qevm-crypto
 ```
 
-### Run (CLI)
-
-Generate keypairs:
+## CLI Demo
 
 ```bash
-cargo run -p qevm-core -- generate-keys
+# Start the RPC node
+cargo run -p qevm-cli -- node start
+
+# Simulate bundler flow with 5 user ops
+cargo run -p qevm-cli -- simulate --count 5
+
+# Run crypto benchmarks
+cargo run -p qevm-cli -- benchmark --iters 50
 ```
 
-Sign a message:
+## Web UI
 
 ```bash
-# algo: mldsa | ecdsa
-cargo run -p qevm-core -- sign-message --algo mldsa "hello" --sk-hex <SECRET_KEY_HEX>
+cargo run -p qevm-web-ui
 ```
 
-Verify a message signature:
+Open <http://127.0.0.1:8081> to view the live demo console.
 
-```bash
-cargo run -p qevm-core -- verify-message --algo mldsa "hello" --pk-hex <PUBLIC_KEY_HEX> --sig-hex <SIGNATURE_HEX>
-```
+## RPC Endpoints
 
-Simulate bundler (creates + signs N UserOperations, validates, bundles):
+- `GET /api/health`
+- `GET /api/status`
+- `GET /api/mempool`
+- `POST /api/user-operations`
+- `GET /api/receipts/:hash`
+- `GET /api/events` (SSE)
 
-```bash
-cargo run -p qevm-core -- simulate-bundler --count 5
-```
+## Notes
 
-Run benchmarks (averages over N iterations) and prints a table:
-
-```bash
-cargo run -p qevm-core -- run-benchmarks --iters 50
-```
-
-### Example Outputs
-
-Benchmarks output format:
-
-```text
-Algorithm | KeyGen(ms) | Sign(ms) | Verify(ms)
----|---:|---:|---:
-ML-DSA(Dilithium2) | 0.000 | 0.000 | 0.000
-ECDSA(secp256k1) | 0.000 | 0.000 | 0.000
-```
-
-Bundler prints acceptance and a sample `UserOperation` JSON (hex fields for readability).
-
+The current zkVM integration is a **dev-mode proof pipeline** that mirrors the paper’s flow and enforces deterministic public inputs. Swap in RISC Zero / SP1 receipts when wiring a production prover.

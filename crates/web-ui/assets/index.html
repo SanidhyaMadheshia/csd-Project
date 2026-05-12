@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Q-EVM Demo Console</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Q-EVM Research Console</h1>
+      <p>Forkless ML-DSA validation with zkVM receipts</p>
+    </div>
+    <div class="status" id="status-pill">Connecting...</div>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card">
+        <h2>Node Status</h2>
+        <ul id="status-list"></ul>
+      </div>
+      <div class="card">
+        <h2>Bundler Mempool</h2>
+        <div id="mempool"></div>
+      </div>
+      <div class="card">
+        <h2>Protocol Flow</h2>
+        <ol class="flow">
+          <li>UserOperation created with ML-DSA signature</li>
+          <li>Bundler simulates validation + zkVM proof</li>
+          <li>Receipt attached for on-chain wallet verification</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2>Metrics Snapshot</h2>
+        <canvas id="metrics-chart"></canvas>
+      </div>
+    </section>
+
+    <section class="card logs">
+      <h2>Realtime Events</h2>
+      <div id="events"></div>
+    </section>
+  </main>
+</body>
+</html>

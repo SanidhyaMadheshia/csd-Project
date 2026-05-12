@@ -1,0 +1,17 @@
+[package]
+name = "qevm-zkvm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "zkVM abstraction layer for Q-EVM"
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+qevm-crypto = { path = "../crypto" }
+qevm-types = { path = "../types" }
+qevm-utils = { path = "../utils" }

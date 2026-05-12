@@ -1,0 +1,23 @@
+[package]
+name = "qevm-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "Core node orchestration for Q-EVM"
+
+[dependencies]
+anyhow = { workspace = true }
+metrics = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+qevm-bundler = { path = "../bundler" }
+qevm-crypto = { path = "../crypto" }
+qevm-network = { path = "../network" }
+qevm-storage = { path = "../storage" }
+qevm-telemetry = { path = "../telemetry" }
+qevm-types = { path = "../types" }
+qevm-utils = { path = "../utils" }
+qevm-zkvm = { path = "../zkvm" }

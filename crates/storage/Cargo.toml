@@ -1,0 +1,13 @@
+[package]
+name = "qevm-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "Storage interfaces for Q-EVM"
+
+[dependencies]
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+qevm-types = { path = "../types" }
