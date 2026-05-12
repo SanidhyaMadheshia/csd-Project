@@ -1,0 +1,20 @@
+[package]
+name = "qevm-bundler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "Bundler pipeline for Q-EVM"
+
+[dependencies]
+async-trait = { workspace = true }
+metrics = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+qevm-crypto = { path = "../crypto" }
+qevm-storage = { path = "../storage" }
+qevm-types = { path = "../types" }
+qevm-utils = { path = "../utils" }
+qevm-zkvm = { path = "../zkvm" }

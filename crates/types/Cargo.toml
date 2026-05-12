@@ -1,0 +1,18 @@
+[package]
+name = "qevm-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "Core protocol types for Q-EVM"
+
+[dependencies]
+hex = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+qevm-utils = { path = "../utils" }
+
+[dev-dependencies]
+proptest = { workspace = true }

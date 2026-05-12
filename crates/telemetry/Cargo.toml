@@ -1,0 +1,15 @@
+[package]
+name = "qevm-telemetry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "Telemetry and metrics setup for Q-EVM"
+
+[dependencies]
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

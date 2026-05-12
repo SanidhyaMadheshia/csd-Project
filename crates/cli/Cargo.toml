@@ -1,0 +1,22 @@
+[package]
+name = "qevm-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+description = "CLI for Q-EVM"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+indicatif = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+qevm-core = { path = "../core" }
+qevm-crypto = { path = "../crypto" }
+qevm-rpc = { path = "../rpc" }
+qevm-telemetry = { path = "../telemetry" }
+qevm-types = { path = "../types" }
+qevm-utils = { path = "../utils" }
