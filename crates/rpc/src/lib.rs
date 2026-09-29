@@ -7,9 +7,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use qevm_core::{Node, NodeEvent, NodeStatus};
-use qevm_types::{OpHash, UserOperationHex};
-use serde::Serialize;
+use qevm_core::{DemoOutcome, Node, NodeEvent, NodeStatus};
+use qevm_types::{GasAnalysis, OpHash, UserOperationHex};
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -62,6 +62,9 @@ pub fn router(node: Arc<Node>) -> Router {
         .route("/user-operations", post(submit))
         .route("/receipts/:hash", get(receipt))
         .route("/events", get(events))
+        // Measured on-chain gas vs metered native ML-DSA gas, from live receipts
+        .route("/gas-analysis", get(gas_analysis))
+        .route("/demo", post(demo))
         .with_state(state)
 }
 
@@ -73,6 +76,35 @@ pub async fn serve(addr: SocketAddr, node: Arc<Node>) -> anyhow::Result<()> {
 
 async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
+}
+
+/// GET /gas-analysis
+/// Aggregates every receipt this node produced: EVM-measured Groth16 verifier
+/// gas vs metered native ML-DSA gas. `measured` is false until the first op.
+async fn gas_analysis(State(state): State<RpcState>) -> Json<GasAnalysis> {
+    Json(state.node.gas_analysis().await)
+}
+
+#[derive(Debug, Deserialize)]
+struct DemoRequest {
+    count: Option<usize>,
+}
+
+/// POST /demo {"count": n}
+/// Generates n fresh ML-DSA keys, signs and submits one op per key through the
+/// real bundler/prover pipeline, then bundles them.
+#[instrument(skip_all)]
+async fn demo(
+    State(state): State<RpcState>,
+    Json(request): Json<DemoRequest>,
+) -> Result<Json<DemoOutcome>, RpcError> {
+    let count = request.count.unwrap_or(8).clamp(1, 64);
+    let outcome = state
+        .node
+        .run_demo(count, 1)
+        .await
+        .map_err(|e| RpcError::Node(e.to_string()))?;
+    Ok(Json(outcome))
 }
 
 #[instrument(skip_all)]
@@ -137,14 +169,20 @@ async fn events(State(state): State<RpcState>) -> Sse<impl tokio_stream::Stream<
         match message {
             Ok(event) => {
                 let payload = match &event {
-                    NodeEvent::UserOperationAccepted { op_hash } => {
-                        serde_json::json!({"type": "accepted", "op_hash": op_hash.to_hex()})
+                    NodeEvent::UserOperationAccepted { op_hash, onchain_gas, native_gas, prove_time_ms } => {
+                        serde_json::json!({
+                            "type": "accepted",
+                            "op_hash": op_hash.to_hex(),
+                            "onchain_gas": onchain_gas,
+                            "native_gas": native_gas,
+                            "prove_time_ms": prove_time_ms,
+                        })
                     }
                     NodeEvent::UserOperationRejected { op_hash, reason } => {
                         serde_json::json!({"type": "rejected", "op_hash": op_hash.to_hex(), "reason": reason})
                     }
-                    NodeEvent::BatchCreated { batch_id, size } => {
-                        serde_json::json!({"type": "batch", "batch_id": batch_id, "size": size})
+                    NodeEvent::BatchCreated { batch_id, size, gas } => {
+                        serde_json::json!({"type": "batch", "batch_id": batch_id, "size": size, "gas": gas})
                     }
                 };
                 Some(Ok(Event::default().data(payload.to_string())))

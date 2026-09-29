@@ -12,6 +12,7 @@ serde = { workspace = true }
 serde_bytes = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
+qevm-evm = { path = "../evm" }
 qevm-utils = { path = "../utils" }
 
 [dev-dependencies]
