@@ -1,50 +1,119 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Q-EVM Demo Console</title>
-  <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js" defer></script>
+  <title>Q-EVM Gas Lab</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <div>
-      <h1>Q-EVM Research Console</h1>
-      <p>Forkless ML-DSA validation with zkVM receipts</p>
+  <header class="top">
+    <div class="brand">Q-EVM<span class="cursor">_</span></div>
+    <div class="status">
+      <span class="live" id="live"><i></i><b id="live-text">connecting</b></span>
+      <span>mempool <b id="st-mempool">0</b></span>
+      <span>receipts <b id="st-samples">0</b></span>
+      <span>last batch <b id="st-batch">—</b></span>
     </div>
-    <div class="status" id="status-pill">Connecting...</div>
   </header>
 
   <main>
-    <section class="grid">
-      <div class="card">
-        <h2>Node Status</h2>
-        <ul id="status-list"></ul>
+    <!-- 1. The claim -->
+    <section class="hero reveal">
+      <p class="eyebrow">On-chain gas per transaction</p>
+      <p class="flow">user signs with ML-DSA → <b>bundler verifies ML-DSA off-chain</b> → Groth16 proof → <b>only the proof is verified on-chain</b></p>
+
+      <div class="versus">
+        <div class="side">
+          <div class="tag">Without Q-EVM · ML-DSA on-chain</div>
+          <div class="num" id="native-avg">—</div>
+          <div class="unit">gas · estimated baseline, not executed</div>
+        </div>
+        <div class="delta">
+          <div class="pct" id="reduction">—</div>
+          <div class="unit">reduction</div>
+          <div class="saved" id="saved">&nbsp;</div>
+        </div>
+        <div class="side">
+          <div class="tag">With Q-EVM · ML-DSA off-chain</div>
+          <div class="num" id="onchain-avg">—</div>
+          <div class="unit">gas · Groth16 proof verified on the EVM</div>
+        </div>
       </div>
-      <div class="card">
-        <h2>Bundler Mempool</h2>
-        <div id="mempool"></div>
+
+      <div class="bars">
+        <div class="bar-row">
+          <span class="bar-label">without</span>
+          <div class="track"><div class="fill" id="bar-native"></div></div>
+          <span class="bar-val" id="bar-native-val">—</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">with</span>
+          <div class="track"><div class="fill" id="bar-onchain"></div></div>
+          <span class="bar-val" id="bar-onchain-val">—</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">batched</span>
+          <div class="track"><div class="fill" id="bar-batch"></div></div>
+          <span class="bar-val" id="bar-batch-val">—</span>
+        </div>
       </div>
-      <div class="card">
-        <h2>Protocol Flow</h2>
-        <ol class="flow">
-          <li>UserOperation created with ML-DSA signature</li>
-          <li>Bundler simulates validation + zkVM proof</li>
-          <li>Receipt attached for on-chain wallet verification</li>
-        </ol>
-      </div>
-      <div class="card">
-        <h2>Metrics Snapshot</h2>
-        <canvas id="metrics-chart"></canvas>
+
+      <div class="actions">
+        <label>ops
+          <select id="demo-count">
+            <option>4</option><option selected>8</option><option>16</option><option>32</option>
+          </select>
+        </label>
+        <button id="demo-btn" type="button">Run demo</button>
+        <span class="hint" id="demo-hint">Signs, proves and verifies operations on the EVM.</span>
       </div>
     </section>
 
-    <section class="card logs">
-      <h2>Realtime Events</h2>
-      <div id="events"></div>
+    <!-- 2. Key stats -->
+    <section class="grid4 reveal">
+      <div class="cell"><div class="k">ops / block without q-evm</div><div class="v" id="ops-native">—</div></div>
+      <div class="cell"><div class="k">ops / block with q-evm</div><div class="v" id="ops-onchain">—</div></div>
+      <div class="cell"><div class="k">avg off-chain prove time</div><div class="v" id="prove-ms">—</div></div>
+      <div class="cell"><div class="k">on-chain min / max</div><div class="v" id="minmax">—</div></div>
+    </section>
+
+    <!-- 3. Measured vs paper -->
+    <section class="panel reveal">
+      <h2>This node vs. paper</h2>
+      <p class="sub">Paper values are the projections in Table II.</p>
+      <table class="cmp">
+        <thead><tr><th>metric</th><th>this node</th><th>paper</th><th>source</th></tr></thead>
+        <tbody>
+          <tr><td>ML-DSA verified on-chain (baseline)</td><td id="c-native">—</td><td id="p-native">—</td><td>estimated per signature, not executed</td></tr>
+          <tr><td>Q-EVM: Groth16 proof on-chain</td><td id="c-onchain">—</td><td id="p-onchain">—</td><td>measured, EVM <code>gas_used</code></td></tr>
+          <tr><td>Reduction</td><td id="c-red">—</td><td id="p-red">—</td><td>computed</td></tr>
+          <tr><td>Gas saved per op</td><td id="c-saved">—</td><td id="p-saved">—</td><td>computed</td></tr>
+          <tr><td>Batched gas / op</td><td id="c-batch">—</td><td id="p-batch">—</td><td>batch proof ÷ ops</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5. Batch -->
+    <section class="panel reveal">
+      <h2>Batching</h2>
+      <p class="sub">One Groth16 receipt covers the whole batch, so its gas is shared.</p>
+      <div class="grid4 inner">
+        <div class="cell"><div class="k">ops in last batch</div><div class="v" id="b-size">—</div></div>
+        <div class="cell"><div class="k">batch verify gas</div><div class="v" id="b-gas">—</div></div>
+        <div class="cell"><div class="k">proof gas per op</div><div class="v" id="b-per-op">—</div></div>
+        <div class="cell"><div class="k">vs single receipt</div><div class="v" id="b-vs">—</div></div>
+      </div>
+    </section>
+
+    <!-- 6. Live feed -->
+    <section class="panel reveal">
+      <h2>Live receipts</h2>
+      <div class="feed-head"><span>time</span><span>op / batch</span><span>without</span><span>with q-evm</span><span>prove</span></div>
+      <ol class="feed" id="feed"><li class="empty">no operations yet</li></ol>
     </section>
   </main>
+
+  <script src="app.js"></script>
 </body>
 </html>

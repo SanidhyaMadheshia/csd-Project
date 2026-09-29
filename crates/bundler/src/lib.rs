@@ -145,12 +145,27 @@ impl Bundler {
             finalized_ops.push(op.with_receipt(receipt));
         }
 
+        // One Groth16 proof for the whole batch: its verification gas is paid
+        // once on-chain and amortized across every op in the batch.
+        let batch_receipt = if finalized_ops.is_empty() {
+            None
+        } else {
+            let hashes: Vec<OpHash> = finalized_ops.iter().map(|op| op.op_hash()).collect();
+            Some(
+                self.zkvm
+                    .prove_batch(&hashes)
+                    .await
+                    .map_err(|e| BundlerError::Zkvm(e.to_string()))?,
+            )
+        };
+
         metrics::counter!("bundler.batches.created").increment(1);
 
         Ok(Some(BundlerBatch {
             batch_id: Uuid::new_v4(),
             created_at: now_millis().map_err(|e| BundlerError::Storage(e.to_string()))?,
             operations: finalized_ops,
+            batch_receipt,
         }))
     }
 
@@ -234,5 +249,11 @@ mod tests {
 
         let outcome = bundler.submit_user_operation(op).await.expect("submit");
         assert!(outcome.accepted);
+
+        let batch = bundler.bundle_next().await.expect("bundle").expect("batch");
+        assert_eq!(batch.operations.len(), 1);
+        let receipt = batch.batch_receipt.expect("batch receipt");
+        assert!(receipt.onchain_gas.success);
+        assert_eq!(receipt.size, 1);
     }
 }

@@ -1,16 +1,13 @@
 use clap::{Parser, Subcommand};
-use indicatif::{ProgressBar, ProgressStyle};
-use qevm_core::{BundlerConfig, Node, NodeConfig};
+use qevm_core::{BundlerConfig, Node, NodeConfig, NodeEvent};
 use qevm_crypto::{
     hex_decode, hex_encode, EcdsaSecp256k1, MlDsaDilithium2, SignatureScheme,
 };
 use qevm_rpc::serve as serve_rpc;
 use qevm_telemetry::{init_telemetry, TelemetryConfig};
-use qevm_types::{Address, PqcPayload, UserOperation};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::time::Duration;
 
 #[derive(Parser, Debug)]
 #[command(name = "qevm", version, about = "Q-EVM Research Prototype")]
@@ -187,42 +184,39 @@ async fn cmd_simulate(count: usize, chain_id: u64) -> anyhow::Result<()> {
     init_telemetry(TelemetryConfig::default())?;
     let node = Arc::new(Node::new(NodeConfig::default()));
 
-    let sender = Address::from_hex("0x0000000000000000000000000000000000000001")?;
-    let (pk, sk) = MlDsaDilithium2::keygen()?;
+    let mut events = node.subscribe();
+    let printer = tokio::spawn(async move {
+        while let Ok(event) = events.recv().await {
+            match event {
+                NodeEvent::UserOperationAccepted { op_hash, onchain_gas, native_gas, prove_time_ms } => println!(
+                    "accepted {op_hash}  on-chain {onchain_gas} gas (measured)  native {native_gas} gas (metered)  prove {prove_time_ms:.1} ms"
+                ),
+                NodeEvent::UserOperationRejected { op_hash, reason } => println!("rejected {op_hash}: {reason}"),
+                NodeEvent::BatchCreated { batch_id, size, .. } => println!("Bundled batch {batch_id} with {size} operations"),
+            }
+        }
+    });
 
-    let progress = ProgressBar::new(count as u64);
-    progress.set_style(
-        ProgressStyle::with_template("{spinner:.green} {pos}/{len} {msg}")
-            .unwrap()
-            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+    let demo = node.run_demo(count, chain_id).await?;
+    drop(node);
+    let _ = printer.await;
+
+    let a = &demo.analysis;
+    println!();
+    println!("Gas analysis over {} receipts", a.samples);
+    println!("  on-chain Groth16 verify (EVM gas_used): avg {}  min {}  max {}", a.onchain_avg, a.onchain_min, a.onchain_max);
+    println!("  native ML-DSA-44 verify (metered):      avg {}", a.native_avg);
+    println!("  reduction: {:.2}%  ({} gas saved per op)", a.reduction_percent, a.gas_saved_avg);
+    for batch in &demo.batches {
+        println!(
+            "  batch of {}: one proof, {} gas on-chain = {} gas per op",
+            batch.size, batch.onchain_gas.total, batch.amortized_gas_per_op
+        );
+    }
+    println!(
+        "  paper reference: {} -> {} gas ({:.1}%)",
+        a.paper.native_gas, a.paper.groth16_gas, a.paper.reduction_percent
     );
-
-    for i in 0..count {
-        let mut op = UserOperation::new(
-            sender,
-            i as u64,
-            chain_id,
-            format!("call:{}", i).into_bytes(),
-            PqcPayload {
-                public_key: MlDsaDilithium2::pk_to_bytes(&pk),
-                signature: vec![],
-            },
-        )?;
-        let sig = MlDsaDilithium2::sign(op.op_hash().as_bytes(), &sk)?;
-        op.pqc_payload.signature = MlDsaDilithium2::sig_to_bytes(&sig);
-
-        let outcome = node.submit_user_operation(op).await?;
-        progress.set_message(format!("submitted {} (accepted={})", i, outcome.accepted));
-        progress.inc(1);
-    }
-
-    progress.finish_with_message("user operations submitted");
-
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    if let Some(batch) = node.bundle_next().await? {
-        println!("Bundled batch {} with {} operations", batch.batch_id, batch.operations.len());
-    }
-
     Ok(())
 }
 

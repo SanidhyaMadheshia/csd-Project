@@ -13,5 +13,6 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 qevm-crypto = { path = "../crypto" }
+qevm-evm = { path = "../evm" }
 qevm-types = { path = "../types" }
 qevm-utils = { path = "../utils" }
