@@ -1,6 +1,6 @@
 # Changes from the Original Paper
 
-Original: `group_52_CSD_Lab_Final.pdf` (repository root), **unchanged**.
+Original: `group_52_CSD_Lab_Final.pdf` (kept by the authors, not published in this repository), **unchanged**.
 Revised copy: `paper/revised/main.tex` (IEEEtran LaTeX, rebuilt from the original's text).
 
 Every number in the revised paper is generated from `results/` by `scripts/make_paper_tables.py` into `tables/macros.tex`, `tables/*.tex` and `data/*.csv`. No figure is typed by hand.

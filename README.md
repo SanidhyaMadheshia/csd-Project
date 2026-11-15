@@ -67,7 +67,6 @@ RPC: `GET /api/health`, `/api/status`, `/api/mempool`, `/api/gas-analysis`, `/ap
 - [docs/circuit-spec.md](docs/circuit-spec.md): the Groth16 relation, trust model, replay protection
 - [docs/future-work-zkvm-linux.md](docs/future-work-zkvm-linux.md): zkVM proving plan and other deferred work
 - [docs/reproducibility.md](docs/reproducibility.md): environment and experimental methodology
-- [supervisor-feedback-plan.md](supervisor-feedback-plan.md): supervisor's points and their status
 - [paper/revised/](paper/revised/): revised paper (LaTeX); the original PDF is unchanged
 
 **Not audited. Research code only.**
