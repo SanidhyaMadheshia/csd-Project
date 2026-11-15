@@ -1,16 +1,30 @@
-//! Real Groth16 receipts over BN254 (arkworks).
+//! Groth16 receipts over BN254 (arkworks 0.4).
 //!
-//! The circuit exposes five public inputs, the same count and shape as the
-//! RISC Zero Groth16 receipt verifier (two 128-bit limbs for the claim
-//! digest, two for the program image id, plus a validity flag). On-chain
-//! Groth16 verification cost depends only on the number of public inputs,
-//! never on circuit size, so the gas measured for this verifier is the gas a
-//! zkVM Groth16 receipt with the same public inputs costs on Ethereum.
+//! # What this circuit proves (and what it does not)
 //!
-//! Scope note: the ML-DSA check itself runs natively in the bundler before a
-//! receipt is produced. Arithmetising FIPS 204 verification inside the circuit
-//! is the paper's future work (§VII-B); this circuit binds the verification
-//! *result* (op hash, program id, `is_valid = 1`) to a succinct proof.
+//! Statement x = (d_hi, d_lo, p_hi, p_lo, v) ∈ F_r^5: the 32-byte batch
+//! digest d and program id p = keccak256("qevm.mldsa.verify"), each split into
+//! two 128-bit big-endian limbs, and a validity flag v. Witness w = (s_1..s_5).
+//!
+//!   R_cur = { (x, w) : s_i = x_i^2 for i = 1..5  and  v = 1 }
+//!
+//! 6 R1CS constraints, 5 public inputs (+1 constant), 5 witness variables.
+//!
+//! * Guarantees: a proof verifies only for the exact (d, p, v = 1) it was made
+//!   for, so it cannot be moved to another digest. (This binding comes from
+//!   Groth16 itself, through the IC terms of the verifying key; the squaring
+//!   constraints add nothing to it.)
+//! * Does NOT guarantee that any ML-DSA signature was checked: the witness is
+//!   computable from x alone, so anyone holding the (public) proving key can
+//!   prove any digest. Signature validity rests on the bundler, which runs
+//!   FIPS 204 verification natively before it proves. The setup is also a
+//!   single-party development setup from a fixed seed, so its trapdoor is
+//!   known. Proving ML-DSA inside a zkVM is future work
+//!   (docs/future-work-zkvm-linux.md).
+//!
+//! The on-chain cost of Groth16 verification depends only on the number of
+//! public inputs, not on circuit size, so the measured verifier gas is the gas
+//! a zkVM Groth16 receipt with five public inputs would cost.
 
 use ark_bn254::{Bn254, Fq, Fr, G1Affine, G2Affine};
 use ark_ff::{BigInteger, PrimeField};
@@ -69,8 +83,9 @@ impl ConstraintSynthesizer<Fr> for ReceiptCircuit {
             let value = self.inputs.map(|v| v[i]);
             vars.push(cs.new_input_variable(|| value.ok_or(SynthesisError::AssignmentMissing))?);
         }
-        // Bind every public input into the constraint system (x * x = sq) so a
-        // proof cannot be replayed against different public inputs.
+        // Give every public input a constraint (x * x = sq). Groth16 binds the
+        // public inputs through the verifying key's IC terms regardless; these
+        // constraints only keep each input "used" by the circuit.
         for (i, &x) in vars.iter().enumerate() {
             let sq_value = self.inputs.map(|v| v[i] * v[i]);
             let sq = cs.new_witness_variable(|| sq_value.ok_or(SynthesisError::AssignmentMissing))?;
@@ -110,6 +125,16 @@ impl Groth16Keys {
         let inputs = statement.public_inputs();
         let proof = Groth16::<Bn254>::prove(&self.pk, ReceiptCircuit { inputs: Some(inputs) }, &mut rng)
             .map_err(|e| Groth16Error::Synthesis(e.to_string()))?;
+        Ok(encode_calldata(&proof, &inputs))
+    }
+
+    /// Re-randomise a proof (Groth16 proofs are malleable): the result is a
+    /// *different* byte string that verifies for the same statement. Replay
+    /// protection therefore cannot rely on proof bytes being unique.
+    pub fn rerandomize(&self, calldata: &[u8], seed: u64) -> Result<Vec<u8>, Groth16Error> {
+        let (proof, inputs) = decode_calldata(calldata)?;
+        let mut rng = ChaCha20Rng::seed_from_u64(seed);
+        let proof = Groth16::<Bn254>::rerandomize_proof(&self.pvk.vk, &proof, &mut rng);
         Ok(encode_calldata(&proof, &inputs))
     }
 
@@ -183,12 +208,35 @@ fn decode_calldata(data: &[u8]) -> Result<(Proof<Bn254>, [Fr; NUM_PUBLIC_INPUTS]
     if !a.is_on_curve() || !b.is_on_curve() || !c.is_on_curve() {
         return Err(Groth16Error::Malformed);
     }
+    // Same checks as the EVM pairing precompile (EIP-197): points must lie in
+    // the prime-order subgroup (relevant for G2, whose curve has a cofactor).
+    if !a.is_in_correct_subgroup_assuming_on_curve()
+        || !b.is_in_correct_subgroup_assuming_on_curve()
+        || !c.is_in_correct_subgroup_assuming_on_curve()
+    {
+        return Err(Groth16Error::Malformed);
+    }
     let mut inputs = [Fr::from(0u64); NUM_PUBLIC_INPUTS];
     for (i, slot) in inputs.iter_mut().enumerate() {
         let o = 256 + i * 32;
         *slot = Fr::from_be_bytes_mod_order(&data[o..o + 32]);
     }
     Ok((Proof { a, b, c }, inputs))
+}
+
+/// The 256-byte proof part (A ‖ B ‖ C) of verifier calldata, as the wallet takes it.
+pub fn proof_bytes(calldata: &[u8]) -> &[u8] {
+    &calldata[..256]
+}
+
+/// Rebuild the full 416-byte verifier calldata from a 256-byte proof and its statement.
+pub fn full_calldata(proof: &[u8], statement: &ReceiptStatement) -> Vec<u8> {
+    let mut out = Vec::with_capacity(EVM_CALLDATA_LEN);
+    out.extend_from_slice(&proof[..256]);
+    for input in statement.public_inputs() {
+        out.extend_from_slice(&fr_bytes(&input));
+    }
+    out
 }
 
 /// Split calldata back into the statement it claims (digest, program).

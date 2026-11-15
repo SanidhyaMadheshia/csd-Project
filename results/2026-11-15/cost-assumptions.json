@@ -1,0 +1,17 @@
+{
+  "prove_seconds_per_sig": [
+    1.0,
+    5.0,
+    12.4,
+    30.0,
+    60.0
+  ],
+  "prover_usd_per_hour": 1.006,
+  "prover_label": "AWS g5.xlarge on-demand (1x A10G), us-east-1 list price — check before citing",
+  "gas_price_gwei": [
+    1.0,
+    10.0,
+    50.0
+  ],
+  "eth_usd": 3000.0
+}

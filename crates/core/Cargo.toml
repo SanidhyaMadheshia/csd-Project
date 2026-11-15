@@ -15,6 +15,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 qevm-bundler = { path = "../bundler" }
 qevm-crypto = { path = "../crypto" }
+qevm-evm = { path = "../evm" }
 qevm-network = { path = "../network" }
 qevm-storage = { path = "../storage" }
 qevm-telemetry = { path = "../telemetry" }

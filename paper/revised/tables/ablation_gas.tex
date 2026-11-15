@@ -1,0 +1,12 @@
+\begin{tabular}{lrrrrl}
+\toprule
+Configuration & $N=1$ & $N=8$ & $N=32$ & $N=256$ & Trust \\
+\midrule
+A0$'$ native, executed (optimised) & 1{,}248{,}996 & 1{,}248{,}996 & 1{,}248{,}996 & 1{,}248{,}996 & none \\
+A0$''$ native, executed (main) & 8{,}168{,}152 & 8{,}168{,}152 & 8{,}168{,}152 & 8{,}168{,}152 & none \\
+A0 native ML-DSA (model) & 2{,}802{,}020 & 2{,}802{,}047 & 2{,}802{,}048 & 2{,}802{,}032 & none \\
+A1 off-chain + ECDSA attest. & 34{,}953 & 12{,}344 & 9{,}921 & 9{,}215 & bundler key \\
+A2 + Groth16, per op & 251{,}297 & 251{,}302 & 251{,}299 & 251{,}300 & bundler$^\dagger$ \\
+A3 + Groth16 + batching & 251{,}302 & 39{,}387 & 16{,}681 & 10{,}060 & bundler$^\dagger$ \\
+\bottomrule
+\end{tabular}

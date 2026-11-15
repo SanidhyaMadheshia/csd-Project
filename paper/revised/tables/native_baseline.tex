@@ -1,0 +1,12 @@
+\begin{tabular}{lrr}
+\toprule
+Quantity & optimised$^a$ & main branch$^b$ \\
+\midrule
+\texttt{verify} tx gas, mean ($n=100$) & 1{,}248{,}996 & 8{,}168{,}152 \\
+\quad min & 1{,}244{,}485 & 8{,}079{,}771 \\
+\quad max & 1{,}252{,}253 & 8{,}322{,}498 \\
+One-off \texttt{setKey} per account & 4{,}837{,}624 & 4{,}837{,}676 \\
+Opcode cost model, same inputs & \multicolumn{2}{c}{2{,}801{,}997} \\
+Model error vs.\ executed & +124.3\% & -65.7\% \\
+\bottomrule
+\end{tabular}

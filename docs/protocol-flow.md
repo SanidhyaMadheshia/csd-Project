@@ -1,35 +1,38 @@
 # Q-EVM Protocol Flow
 
-This document maps the protocol flow described in the paper to the Rust implementation.
+How the protocol maps to the Rust implementation. Replay protection is specified precisely in [circuit-spec.md](circuit-spec.md) §5.
 
-## 1) UserOperation Creation
-- The wallet constructs a UserOperation with:
-  - sender address
-  - nonce + chain id
-  - calldata
-  - PQC payload (ML-DSA public key + signature)
-- The wallet signs the `op_hash` (Keccak digest of the operation payload).
+## 0. Account registration
+- The wallet stores `pk[sender] = keccak256(ML-DSA-44 public key)` and a starting `nonce[sender]`.
+- In this prototype, `LocalChain::register_account` writes this state directly. It stands in for the wallet's deployment / `initCode` and is not part of any measurement.
 
-## 2) Bundler Validation
-- The bundler performs fast structural checks:
-  - payload presence
-  - duplicate nonce rejection
-- If simulation is enabled, it executes the zkVM prover:
-  - Inputs: op hash, ML-DSA public key, ML-DSA signature
-  - Output: zkVM receipt + journal
-- The receipt is stored and optionally attached to the operation.
+## 1. UserOperation creation
+- The wallet software builds `(wallet, sender, nonce, chain_id, call_data, pk)`.
+- It computes opHash ([architecture.md](architecture.md)).
+- It signs opHash with ML-DSA-44 (FIPS 204 pure mode, empty context).
 
-## 3) Batching
-- Validated operations are placed into a batch (bounded by configuration).
-- Each operation includes an associated zkVM receipt.
-- The batch is ready for on-chain submission (outside this prototype).
+## 2. Bundler validation (off-chain)
+1. Payload present, `chain_id` correct, `wallet` is this wallet.
+2. `keccak(pk) == pk[sender]`, read from chain state.
+3. `(sender, nonce)` never accepted before, and `nonce == nonce[sender] + pending(sender)`.
+4. FIPS 204 verification of the signature over opHash.
 
-## 4) On-Chain Validation (Wallet + Verifier)
-- Smart wallet recomputes `op_hash`.
-- Verifier contract checks proof validity and public input binding.
-- If valid, the wallet accepts the operation and executes the call.
+A failure at any step rejects the op, and the reason is returned.
 
-## Replay Protection
-- The op hash is committed as a public input to the proof.
-- Any mismatch between the proof and on-chain hash causes rejection.
-- Nonces are enforced by the bundler to prevent mempool-level replay.
+## 3. Batching and authorisation
+- Up to `batch_size` ops are taken in arrival order.
+- `digest = keccak256(opHash_1 ‖ … ‖ opHash_N)`.
+- Groth16 mode: prove `(digest, program, 1)` with the binding circuit.
+- Attestation mode (ablation only): the bundler's ECDSA signature over the digest.
+
+## 4. On-chain validation (wallet)
+- Calldata: `auth ‖ N ‖ N × (sender, nonce, keccak(call_data), keccak(pk))`.
+- For each op: check the key, check and increment the nonce, recompute opHash.
+- Recompute the digest, then verify the authorisation.
+- Any failure reverts the whole batch, including all nonce updates.
+
+## Replay protection (summary)
+- The proof is bound to the digest, and the digest to each opHash.
+- Chain id and wallet address are part of opHash.
+- On-chain nonces are consumed. This also defeats re-randomised Groth16 proofs.
+- The bundler remembers `(sender, nonce)` permanently and checks nonces against chain state.

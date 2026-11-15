@@ -1,0 +1,362 @@
+[
+  {
+    "category": "valid",
+    "case": "1 valid ops, one batch",
+    "layer": "bundler+wallet",
+    "expected": "accepted",
+    "observed": "accepted: included (1 ops)",
+    "pass": true
+  },
+  {
+    "category": "valid",
+    "case": "8 valid ops, one batch",
+    "layer": "bundler+wallet",
+    "expected": "accepted",
+    "observed": "accepted: included (8 ops)",
+    "pass": true
+  },
+  {
+    "category": "valid",
+    "case": "64 valid ops, one batch",
+    "layer": "bundler+wallet",
+    "expected": "accepted",
+    "observed": "accepted: included (64 ops)",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "bit flip in c~ (challenge hash)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "bit flip in z (response)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "bit flip in h (hint positions)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "malformed hint counts (non-monotonic)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "truncated signature (2419 bytes)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "extended signature (2421 bytes)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "all-zero signature",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "signed with a different key",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "invalid signature",
+    "case": "signature over another message",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "call data changed",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: ML-DSA signature does not verify",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "nonce changed",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: nonce 1 out of order (expected 0)",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "chain id changed",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: wrong chain id 2 (expected 1)",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "wallet address changed",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: op is bound to a different wallet contract",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "sender changed",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: public key is not the one registered for the sender",
+    "pass": true
+  },
+  {
+    "category": "modified op hash",
+    "case": "public key swapped",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: public key is not the one registered for the sender",
+    "pass": true
+  },
+  {
+    "category": "key binding",
+    "case": "unregistered sender (valid signature)",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: sender is not registered in the wallet",
+    "pass": true
+  },
+  {
+    "category": "key binding",
+    "case": "registered sender, op signed by an unregistered key",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: public key is not the one registered for the sender",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "first submission (control)",
+    "layer": "bundler",
+    "expected": "accepted",
+    "observed": "accepted",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "same op again, before bundling",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: duplicate (sender, nonce): replay",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "bundle the original (control)",
+    "layer": "wallet",
+    "expected": "accepted",
+    "observed": "accepted: included (1 ops)",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "same op again, after inclusion",
+    "layer": "bundler",
+    "expected": "rejected",
+    "observed": "rejected: duplicate (sender, nonce): replay",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "same op to a fresh bundler (mempool state lost)",
+    "layer": "bundler (reads on-chain nonce)",
+    "expected": "rejected",
+    "observed": "rejected: nonce 0 out of order (expected 1)",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "wallet tx (control)",
+    "layer": "wallet",
+    "expected": "accepted",
+    "observed": "accepted (gas 268165)",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "identical wallet tx resent",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 31214)",
+    "pass": true
+  },
+  {
+    "category": "replay",
+    "case": "re-randomised proof (different bytes, same statement)",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 31214)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "two ops reordered",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 346136)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "one op dropped",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 320147)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "one op added",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 372125)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "one op duplicated",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 131220)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "N header changed",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 30580)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "truncated calldata",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 30564)",
+    "pass": true
+  },
+  {
+    "category": "altered batch",
+    "case": "untouched batch (control)",
+    "layer": "wallet",
+    "expected": "accepted",
+    "observed": "accepted (gas 346144)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "all-zero proof",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 265109)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "random bytes",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 29072103)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "A point not on the curve",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 29072103)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "C point tampered",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 29072103)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "proof from another trusted setup",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 268157)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "proof for another program id",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 268181)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "proof for the same op on another chain id",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 268181)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "proof for the same op on another wallet",
+    "layer": "wallet",
+    "expected": "rejected",
+    "observed": "rejected: wallet reverted (gas 268181)",
+    "pass": true
+  },
+  {
+    "category": "invalid proof",
+    "case": "valid proof (control)",
+    "layer": "wallet",
+    "expected": "accepted",
+    "observed": "accepted (gas 268165)",
+    "pass": true
+  },
+  {
+    "category": "soundness (negative control)",
+    "case": "unsigned op, proof made directly with the public proving key",
+    "layer": "wallet",
+    "expected": "accepted (documented gap C1)",
+    "observed": "accepted (gas 268189)",
+    "pass": true
+  }
+]

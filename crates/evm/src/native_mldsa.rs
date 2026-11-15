@@ -214,7 +214,8 @@ pub fn estimate_native_gas(pk: &[u8], sig: &[u8], msg: &[u8]) -> Result<NativeGa
             rej_candidates += candidates;
         }
     }
-    let mu = sponge_permutations(64 + msg.len(), SHAKE256_RATE, 64); // μ = H(tr ‖ M, 64)
+    // μ = H(tr ‖ M', 64) with M' = 0x00 ‖ 0x00 ‖ M (FIPS 204 pure mode, empty context).
+    let mu = sponge_permutations(64 + 2 + msg.len(), SHAKE256_RATE, 64);
     let w1_bytes = K * N * 6 / 8;
     let ctilde = sponge_permutations(64 + w1_bytes, SHAKE256_RATE, 32); // c̃' = H(μ ‖ w1Encode(w'1))
     let (ball_blocks, ball_bytes) = sample_in_ball(c_tilde);

@@ -33,7 +33,7 @@ indicatif = "0.17.8"
 k256 = { version = "0.13.4", features = ["ecdsa"] }
 metrics = "0.22.0"
 metrics-exporter-prometheus = "0.14.0"
-pqcrypto-dilithium = "0.5"
+pqcrypto-mldsa = "0.1.2"
 pqcrypto-traits = "0.3"
 proptest = "1.5.0"
 rand_core = "0.6.4"

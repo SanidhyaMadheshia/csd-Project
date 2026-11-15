@@ -14,10 +14,10 @@ mod tests {
 
     #[test]
     fn mldsa_round_trip() {
-        let (pk, sk) = MlDsaDilithium2::keygen().expect("keygen");
+        let (pk, sk) = MlDsa44::keygen().expect("keygen");
         let msg = b"qevm";
-        let sig = MlDsaDilithium2::sign(msg, &sk).expect("sign");
-        let ok = MlDsaDilithium2::verify(msg, &sig, &pk).expect("verify");
+        let sig = MlDsa44::sign(msg, &sk).expect("sign");
+        let ok = MlDsa44::verify(msg, &sig, &pk).expect("verify");
         assert!(ok);
     }
 

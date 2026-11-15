@@ -1,67 +1,47 @@
 # Q-EVM Demo Steps
 
 ## 1) Setup
+On this Windows machine, Smart App Control blocks locally built executables, so use the Linux container. It needs Docker Desktop to be running.
 ```bash
-cargo build
-cargo test
+scripts/dev.sh cargo build --release -p qevm-cli
+scripts/dev.sh cargo test --workspace
+```
+On Linux or macOS, plain `cargo build` / `cargo test` also work.
+
+## 2) Simulate UserOperations
+```bash
+scripts/dev.sh /target/release/qevm-cli simulate --count 5
+```
+For each op, the command creates a fresh account (an ML-DSA-44 key registered in the wallet), signs the op hash, and has the bundler verify the signature off-chain. The batch then gets one Groth16 receipt and is sent to the wallet contract on revm.
+
+Output:
+- one `accepted ...` line per op;
+- the simulated gas of a single-op wallet transaction (about 251k);
+- the native gas from the **cost model** (about 2.8M; not an execution);
+- the batch transaction's gas and gas per op.
+
+## 3) Run the node and the dashboard
+```bash
+cargo run -p qevm-cli -- node start      # RPC on 127.0.0.1:8080
+cargo run -p qevm-web-ui                 # dashboard on http://127.0.0.1:8081
+```
+Click **Run demo** (or `POST /api/demo {"count": 8}`).
+
+## 4) Paper results
+```bash
+scripts/dev.sh /target/release/qevm-cli security-report --out results/security.md
+scripts/dev.sh /target/release/qevm-cli experiment --repeats 30 --out results/<date>
+scripts/native-baseline.sh
 ```
 
-## 2) Start the Node (RPC)
-```bash
-cargo run -p qevm-cli -- node start
-```
-
-Expected output:
-- `Starting Q-EVM node. RPC listening on 127.0.0.1:8080`
-
-## 3) Simulate UserOperations
-```bash
-cargo run -p qevm-cli -- simulate --count 5
-```
-
-Each op gets a fresh ML-DSA key and signature, a real Groth16 proof, and a
-verification on an in-process EVM (revm). Expected output:
-- one `accepted ...` line per op with its measured on-chain gas (~240k, from
-  the EVM's `gas_used`) and metered native ML-DSA gas (~2.8M), about a 91.4% reduction
-- `Bundled batch <id> with 5 operations`
-- a gas summary: avg/min/max on-chain gas, native gas, reduction %, batch gas
-  per op, and the paper's projected figures for comparison
-
-## 4) Launch the Web UI
-```bash
-cargo run -p qevm-web-ui
-```
-
-Open http://127.0.0.1:8081
-- All gas figures show `—` until the node has produced a receipt
-- Click **Run demo** (or `POST /api/demo {"count": 8}`) to push ops
-  through the real pipeline; the numbers and bars animate in
-- Receipts stream into the live feed via `/api/events`
-- `GET /api/gas-analysis` returns the same aggregated measurements as JSON
-
-## Where the gas numbers come from
-- **On-chain (Q-EVM)**: `crates/evm` builds a real Groth16 proof (arkworks,
-  BN254) and calls a Groth16 verifier contract (EVM bytecode with the verifying
-  key embedded) through revm. The number reported is the EVM's `gas_used`.
-- **Native ML-DSA**: `crates/evm/src/native_mldsa.rs` walks each real key and
-  signature through FIPS 204 verification (including rejection sampling),
-  counts the Keccak permutations, NTT butterflies, mulmods and calldata bytes,
-  and prices them with EVM opcode costs. The per-unit costs follow an
-  optimized Yul verifier calibrated to the implementation the paper cites.
-- The paper's projections (`PAPER_*_REF` in `crates/types`) are only shown
-  for comparison.
-
-## 5) Run Benchmarks
-```bash
-cargo run -p qevm-cli -- benchmark --iters 50
-```
-
-Expected output:
-- Table comparing ML-DSA and ECDSA keygen/sign/verify
+## Where the numbers come from
+- **Q-EVM on-chain gas** (measured): `gas_used` of the wallet transaction. It covers the per-op key and nonce checks plus the Groth16 verifier call (`crates/evm`).
+- **Native ML-DSA gas**:
+  - *modelled* by `crates/evm/src/native_mldsa.rs`;
+  - *executed* with the ZKNox Solidity verifier on the same revm chain (`scripts/native-baseline.sh`).
+- **Proving time** (measured): the binding Groth16 circuit only. Proving ML-DSA itself in a zkVM is future work ([docs/future-work-zkvm-linux.md](docs/future-work-zkvm-linux.md)).
 
 ## Troubleshooting
-- `dlltool could not create import library ... Invalid bfd target`: an old
-  32-bit `C:\MinGW\bin` comes before the 64-bit WinLibs mingw64 `bin` in PATH.
-  Put the WinLibs `mingw64\bin` first in PATH.
-- If ports are in use, change `--rpc-addr` or edit `crates/web-ui/src/main.rs`.
-- If no events appear in the UI, submit operations with `simulate` to trigger updates.
+- `An Application Control policy has blocked this file`: Smart App Control is blocking a locally built binary. Use `scripts/dev.sh`.
+- Docker out of memory during a release build: `scripts/dev.sh` limits cargo to 2 jobs (`CARGO_BUILD_JOBS`).
+- `dlltool could not create import library`: only matters for native Windows builds. Put the WinLibs `mingw64\bin` first in PATH.

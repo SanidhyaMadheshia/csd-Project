@@ -1,0 +1,16 @@
+\begin{tabular}{p{2.3cm}rp{3.6cm}l}
+\toprule
+Category & Cases & Decided by & As expected \\
+\midrule
+valid & 3 & bundler+wallet & 3/3 \\
+invalid signature & 9 & bundler & 9/9 \\
+modified op hash & 6 & bundler & 6/6 \\
+key binding & 2 & bundler & 2/2 \\
+replay & 8 & bundler, bundler (reads on-chain nonce), wallet & 8/8 \\
+altered batch & 7 & wallet & 7/7 \\
+invalid proof & 9 & wallet & 9/9 \\
+soundness (negative control) & 1 & wallet & accepted (gap C1) \\
+\midrule
+Total & 45 & & 45/45 \\
+\bottomrule
+\end{tabular}
