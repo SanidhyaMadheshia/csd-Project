@@ -1,12 +1,16 @@
 //! Node orchestration and research benchmarks for Q-EVM.
 
 mod benchmark;
+pub mod experiment;
+pub mod native_baseline;
+pub mod security;
 
 use qevm_bundler::{Bundler, BundlerError, SubmissionOutcome};
-use qevm_crypto::{MlDsaDilithium2, SignatureScheme};
+use qevm_crypto::{MlDsa44, SignatureScheme};
 use qevm_storage::{InMemoryStorage, Storage};
 use qevm_types::{
-    Address, BatchGas, BundlerBatch, GasAnalysis, GasStats, OpHash, PqcPayload, UserOperation, ZkvmReceipt,
+    Address, BatchGas, BatchReceipt, BundlerBatch, GasAnalysis, GasStats, OpHash, PqcPayload, UserOperation,
+    ZkvmReceipt,
 };
 use qevm_zkvm::{LocalZkvmProver, ZkvmConfig, ZkvmError, ZkvmProver};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -111,23 +115,44 @@ impl Node {
 
     /// Generates `count` fresh ML-DSA keys, signs and submits one op per key
     /// through the real pipeline, then bundles the mempool.
+    /// Address of the wallet contract ops must target in the current mode.
+    pub fn wallet_address(&self) -> Address {
+        let kind = self.bundler.config().mode.wallet_kind();
+        Address::new(self.zkvm.chain().wallet(kind).address)
+    }
+
+    /// Account registration: bind `keccak(public_key)` to `sender` in the
+    /// wallets with starting `nonce` (the wallet's constructor in a real deployment).
+    pub fn register_account(&self, sender: &Address, public_key: &[u8], nonce: u64) {
+        self.zkvm.chain().register_account(sender.as_bytes(), qevm_utils::keccak256(public_key), nonce);
+    }
+
+    /// Generates `count` fresh accounts (one ML-DSA key each), registers them,
+    /// signs and submits one op per account through the real pipeline, then
+    /// bundles and includes the mempool on the local chain.
     pub async fn run_demo(&self, count: usize, chain_id: u64) -> Result<DemoOutcome, NodeError> {
-        let sender = Address::from_hex("0x00000000000000000000000000000000000000de")
-            .map_err(|e| NodeError::Bundler(e.to_string()))?;
+        let wallet = self.wallet_address();
         let mut accepted = 0;
         for i in 0..count {
-            let (pk, sk) = MlDsaDilithium2::keygen().map_err(|e| NodeError::Zkvm(e.to_string()))?;
-            let nonce = self.demo_nonce.fetch_add(1, Ordering::Relaxed);
+            let (pk, sk) = MlDsa44::keygen().map_err(|e| NodeError::Zkvm(e.to_string()))?;
+            let account = self.demo_nonce.fetch_add(1, Ordering::Relaxed);
+            let mut sender_bytes = [0u8; 20];
+            sender_bytes[0] = 0xde;
+            sender_bytes[12..].copy_from_slice(&account.to_be_bytes());
+            let sender = Address::new(sender_bytes);
+            let pk_bytes = MlDsa44::pk_to_bytes(&pk);
+            self.register_account(&sender, &pk_bytes, 0);
             let mut op = UserOperation::new(
+                wallet,
                 sender,
-                nonce,
+                0,
                 chain_id,
                 format!("demo-call:{i}").into_bytes(),
-                PqcPayload { public_key: MlDsaDilithium2::pk_to_bytes(&pk), signature: vec![] },
+                PqcPayload { public_key: pk_bytes, signature: vec![] },
             )
             .map_err(|e| NodeError::Bundler(e.to_string()))?;
-            let sig = MlDsaDilithium2::sign(op.op_hash().as_bytes(), &sk).map_err(|e| NodeError::Zkvm(e.to_string()))?;
-            op.pqc_payload.signature = MlDsaDilithium2::sig_to_bytes(&sig);
+            let sig = MlDsa44::sign(op.op_hash().as_bytes(), &sk).map_err(|e| NodeError::Zkvm(e.to_string()))?;
+            op.pqc_payload.signature = MlDsa44::sig_to_bytes(&sig);
             if self.submit_user_operation(op).await?.accepted {
                 accepted += 1;
             }
@@ -135,9 +160,7 @@ impl Node {
 
         let mut batches = Vec::new();
         while let Some(batch) = self.bundle_next().await? {
-            if let Some(receipt) = batch.batch_receipt {
-                batches.push(receipt.gas());
-            }
+            batches.extend(batch.transactions.iter().map(BatchReceipt::gas));
         }
         Ok(DemoOutcome { submitted: count, accepted, batches, analysis: self.gas_analysis().await })
     }
@@ -157,18 +180,16 @@ impl Node {
         if outcome.accepted {
             if let Some(ref receipt) = outcome.receipt {
                 self.gas.write().await.record_receipt(receipt);
-                let _ = self.events.send(NodeEvent::UserOperationAccepted {
-                    op_hash: outcome.op_hash,
-                    onchain_gas: receipt.journal.onchain_gas.total,
-                    native_gas: receipt.journal.native_gas.total,
-                    prove_time_ms: receipt.journal.prove_time_ms,
-                });
             }
-        } else {
-            let _ = self.events.send(NodeEvent::UserOperationRejected {
+            let _ = self.events.send(NodeEvent::UserOperationAccepted {
                 op_hash: outcome.op_hash,
-                reason: "zkvm verification failed".to_string(),
+                onchain_gas: outcome.receipt.as_ref().map(|r| r.journal.onchain_gas.total).unwrap_or(0),
+                native_gas: outcome.signature.map(|c| c.native_gas.total).unwrap_or(0),
+                prove_time_ms: outcome.receipt.as_ref().map(|r| r.journal.prove_time_ms).unwrap_or(0.0),
             });
+        } else {
+            let reason = outcome.rejection.as_ref().map(|r| r.to_string()).unwrap_or_else(|| "rejected".into());
+            let _ = self.events.send(NodeEvent::UserOperationRejected { op_hash: outcome.op_hash, reason });
         }
 
         self.refresh_status().await?;
@@ -184,13 +205,13 @@ impl Node {
             .map_err(|e| NodeError::Bundler(e.to_string()))?;
 
         if let Some(ref batch) = batch {
-            if let Some(ref receipt) = batch.batch_receipt {
-                self.gas.write().await.record_batch(receipt);
+            for tx in &batch.transactions {
+                self.gas.write().await.record_batch(tx);
             }
             let _ = self.events.send(NodeEvent::BatchCreated {
                 batch_id: batch.batch_id.to_string(),
                 size: batch.operations.len(),
-                gas: batch.batch_receipt.as_ref().map(|r| r.gas()),
+                gas: batch.transactions.last().map(BatchReceipt::gas),
             });
             let mut status = self.status.write().await;
             status.last_batch_id = Some(batch.batch_id.to_string());
@@ -247,31 +268,38 @@ impl From<ZkvmError> for NodeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qevm_crypto::{MlDsaDilithium2, SignatureScheme};
+    use qevm_crypto::{MlDsa44, SignatureScheme};
     use qevm_types::{Address, PqcPayload, UserOperation};
 
     #[tokio::test]
     async fn node_accepts_operation() {
-        let (pk, sk) = MlDsaDilithium2::keygen().expect("keygen");
+        let (pk, sk) = MlDsa44::keygen().expect("keygen");
         let sender = Address::from_hex("0x0000000000000000000000000000000000000001").unwrap();
+        let node = Node::new(NodeConfig::default());
+        node.register_account(&sender, &MlDsa44::pk_to_bytes(&pk), 0);
         let mut op = UserOperation::new(
+            node.wallet_address(),
             sender,
             0,
             1,
             b"demo".to_vec(),
             PqcPayload {
-                public_key: MlDsaDilithium2::pk_to_bytes(&pk),
+                public_key: MlDsa44::pk_to_bytes(&pk),
                 signature: vec![],
             },
         )
         .unwrap();
-        let sig = MlDsaDilithium2::sign(op.op_hash().as_bytes(), &sk).expect("sign");
-        op.pqc_payload.signature = MlDsaDilithium2::sig_to_bytes(&sig);
+        let sig = MlDsa44::sign(op.op_hash().as_bytes(), &sk).expect("sign");
+        op.pqc_payload.signature = MlDsa44::sig_to_bytes(&sig);
 
-        let node = Node::new(NodeConfig::default());
         assert!(!node.gas_analysis().await.measured);
-        let outcome = node.submit_user_operation(op).await.expect("submit");
+        let outcome = node.submit_user_operation(op.clone()).await.expect("submit");
         assert!(outcome.accepted);
+        // Replay: the same op again, before and after inclusion.
+        assert!(!node.submit_user_operation(op.clone()).await.expect("submit").accepted);
+        let batch = node.bundle_next().await.expect("bundle").expect("batch");
+        assert!(batch.transactions[0].inclusion.expect("sent").committed);
+        assert!(!node.submit_user_operation(op).await.expect("submit").accepted);
     }
 
     #[tokio::test]

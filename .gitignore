@@ -1,1 +1,25 @@
 target
+results/native-baseline/.solc
+results/native-baseline/.build/
+results/native-baseline-packed/.build/
+results/native-baseline/expanded.json
+results/native-baseline-packed/expanded.json
+results/native-baseline-packed/vectors.json
+paper/revised/*.aux
+paper/revised/*.log
+paper/revised/*.bbl
+paper/revised/*.blg
+paper/revised/*.out
+
+# Course documents and local-only notes (kept on disk, not published)
+/*.pptx
+/*.pdf
+/Group52_QEVM_Project_Update_*.md
+/supervisor-feedback-plan.md
+
+# Regenerable experiment artefacts (scripts/native-baseline.sh, qevm-cli experiment)
+results/*.log
+results/*/summary.json
+results/native-baseline*/vectors.json
+results/native-baseline*/*.bin
+results/native-baseline*/*.hex

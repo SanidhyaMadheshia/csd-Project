@@ -1,14 +1,14 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use qevm_crypto::{EcdsaSecp256k1, MlDsaDilithium2, SignatureScheme};
+use qevm_crypto::{EcdsaSecp256k1, MlDsa44, SignatureScheme};
 
 fn bench_mldsa(c: &mut Criterion) {
     let msg = b"qevm-ml-dsa";
     c.bench_function("mldsa_sign_verify", |b| {
         b.iter_batched(
-            || MlDsaDilithium2::keygen().expect("keygen"),
+            || MlDsa44::keygen().expect("keygen"),
             |(pk, sk)| {
-                let sig = MlDsaDilithium2::sign(msg, &sk).expect("sign");
-                let ok = MlDsaDilithium2::verify(msg, &sig, &pk).expect("verify");
+                let sig = MlDsa44::sign(msg, &sk).expect("sign");
+                let ok = MlDsa44::verify(msg, &sig, &pk).expect("verify");
                 assert!(ok);
             },
             BatchSize::SmallInput,

@@ -1,0 +1,470 @@
+﻿% Verified on 2026-11-15 against primary sources (see CHANGES.md).
+@inproceedings{groth2016size,
+  author    = {Jens Groth},
+  title     = {On the Size of Pairing-Based Non-interactive Arguments},
+  booktitle = {Advances in Cryptology -- EUROCRYPT 2016},
+  series    = {LNCS},
+  pages     = {305--326},
+  year      = {2016},
+  doi       = {10.1007/978-3-662-49896-5_11},
+  url       = {https://doi.org/10.1007/978-3-662-49896-5_11},
+  note      = {accessed 2026-11-15}
+}
+
+@inproceedings{arun2024jolt,
+  author    = {Arasu Arun and Srinath Setty and Justin Thaler},
+  title     = {Jolt: {SNARKs} for Virtual Machines via Lookups},
+  booktitle = {Advances in Cryptology -- EUROCRYPT 2024},
+  series    = {LNCS},
+  pages     = {3--33},
+  year      = {2024},
+  doi       = {10.1007/978-3-031-58751-1_1},
+  url       = {https://eprint.iacr.org/2023/1217},
+  note      = {accessed 2026-11-15}
+}
+
+@misc{jolt2026repo,
+  author       = {{a16z crypto}},
+  title        = {Jolt: a {RISC-V} zkVM},
+  howpublished = {GitHub repository, MIT/Apache-2.0},
+  year         = {2026},
+  url          = {https://github.com/a16z/jolt},
+  note         = {alpha, not production-ready; accessed 2026-11-15}
+}
+
+@misc{bruestle2023risczero,
+  author       = {Jeremy Bruestle and Paul Gafni and {RISC Zero Team}},
+  title        = {{RISC} Zero zkVM: Scalable, Transparent Arguments of {RISC-V} Integrity},
+  howpublished = {Draft whitepaper},
+  year         = {2023},
+  url          = {https://dev.risczero.com/proof-system-in-detail.pdf},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{risczero2026security,
+  author       = {{RISC Zero}},
+  title        = {Cryptographic Security Model},
+  howpublished = {RISC Zero developer documentation},
+  year         = {2026},
+  url          = {https://dev.risczero.com/api/security-model},
+  note         = {Groth16 over BN254, 99+ bits, not quantum safe; accessed 2026-11-15}
+}
+
+@misc{risczero2026ethereum,
+  author       = {{RISC Zero}},
+  title        = {risc0-ethereum: {RISC} Zero integration with Ethereum and {EVM} chains},
+  howpublished = {GitHub repository, Apache-2.0},
+  year         = {2026},
+  url          = {https://github.com/risc0/risc0-ethereum},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{succinct2026sp1prooftypes,
+  author       = {{Succinct Labs}},
+  title        = {{SP1} Proof Types},
+  howpublished = {SP1 documentation},
+  year         = {2026},
+  url          = {https://docs.succinct.xyz/docs/sp1/generating-proofs/proof-types},
+  note         = {Groth16 about 260 B, about 270k gas; PLONK about 868 B, about 300k gas; accessed 2026-11-15}
+}
+
+@misc{kaspakii2026pqzkbench,
+  author       = {{KaspaKii}},
+  title        = {kaspa-pq-zk-bench: Proving {ML-DSA-44}, {FN-DSA}/{Falcon-512} and {SLH-DSA} verification in the {RISC} Zero zkVM},
+  howpublished = {GitHub repository, MIT},
+  year         = {2026},
+  url          = {https://github.com/KaspaKii/kaspa-pq-zk-bench},
+  note         = {non-peer-reviewed; RTX 4090, RISC Zero 3.0.6, succinct STARK; accessed 2026-11-15}
+}
+
+@misc{zknox2026ethdilithium,
+  author       = {{ZKNox}},
+  title        = {{ETHDILITHIUM}: Implementation of {MLDSA} and its variants for {Ethereum}},
+  howpublished = {GitHub repository, MIT},
+  year         = {2026},
+  url          = {https://github.com/ZKNoxHQ/ETHDILITHIUM},
+  note         = {not audited; accessed 2026-11-15}
+}
+
+@misc{zknox2026ethfalcon,
+  author       = {{ZKNox}},
+  title        = {{ETHFALCON}: Implementation of {FALCON} and its variants for {Ethereum}},
+  howpublished = {GitHub repository, MIT},
+  year         = {2026},
+  url          = {https://github.com/ZKNoxHQ/ETHFALCON},
+  note         = {not audited; accessed 2026-11-15}
+}
+
+@misc{yomtov2026fireblocks,
+  author       = {Oren Yomtov},
+  title        = {Post-Quantum Signatures on {Ethereum}: Cheaper Gas},
+  howpublished = {Fireblocks blog, 2 September 2026},
+  year         = {2026},
+  url          = {https://www.fireblocks.com/blog/post-quantum-signatures-ethereum-cheaper-gas},
+  note         = {title as rendered in URL slug, check exact title on page; accessed 2026-11-15}
+}
+
+@misc{fireblocks2026evmmldsa,
+  author       = {{Fireblocks Labs}},
+  title        = {evm-ml-dsa-verifier: Efficient {EVM} {ML-DSA} verifier},
+  howpublished = {GitHub repository, MIT},
+  year         = {2026},
+  url          = {https://github.com/fireblocks-labs/evm-ml-dsa-verifier},
+  note         = {1,226,311 gas per ML-DSA-44 verify; not audited; accessed 2026-11-15}
+}
+
+@misc{eip8051,
+  author       = {Renaud Dubois and Simon Masson},
+  title        = {{EIP-8051}: Precompile for {ML-DSA} signature verification},
+  howpublished = {Ethereum Improvement Proposals, no. 8051 (Draft)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-8051},
+  note         = {created 2025-10-15; accessed 2026-11-15}
+}
+
+@misc{eip8052,
+  author       = {Renaud Dubois and Simon Masson and Antonio Sanso and Marius van der Wijden and Kevaundray Wedderburn and Zhenfei Zhang and Nicolas Consigny},
+  title        = {{EIP-8052}: Precompile for {Falcon} support},
+  howpublished = {Ethereum Improvement Proposals, no. 8052 (Draft)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-8052},
+  note         = {created 2025-10-17; accessed 2026-11-15}
+}
+
+@misc{eip8355,
+  author       = {Danno Ferrin},
+  title        = {{EIP-8355}: Precompiles for {ML-DSA} Verification},
+  howpublished = {Ethereum Improvement Proposals, no. 8355 (Draft)},
+  year         = {2026},
+  url          = {https://eips.ethereum.org/EIPS/eip-8355},
+  note         = {created 2026-07-30; accessed 2026-11-15}
+}
+
+@misc{eip7885,
+  author       = {Renaud Dubois and Simon Masson and Yoon Hyoung Lee},
+  title        = {{EIP-7885}: Precompile for {NTT} operations},
+  howpublished = {Ethereum Improvement Proposals, no. 7885 (Draft)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-7885},
+  note         = {created 2025-02-12; accessed 2026-11-15}
+}
+
+@misc{eip7932,
+  author       = {James Kempton},
+  title        = {{EIP-7932}: Secondary Signature Algorithms},
+  howpublished = {Ethereum Improvement Proposals, no. 7932 (Draft)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-7932},
+  note         = {created 2025-04-12; accessed 2026-11-15}
+}
+
+@inproceedings{schemitt2025assessing,
+  author    = {Alison Gon{\c{c}}alves Schemitt and Henrique Fan da Silva and Roben Castagna Lunardi and Diego Kreutz and Rodrigo Brand{\~a}o Mansilha and Avelino Francisco Zorzo},
+  title     = {Assessing the Impact of Post-Quantum Digital Signature Algorithms on Blockchains},
+  booktitle = {2025 IEEE 24th International Conference on Trust, Security and Privacy in Computing and Communications (TrustCom)},
+  pages     = {2373--2380},
+  year      = {2025},
+  doi       = {10.1109/TrustCom66490.2025.00276},
+  url       = {https://arxiv.org/abs/2510.09271},
+  note      = {code: https://github.com/conseg/PQCinBlock; accessed 2026-11-15}
+}
+
+@inproceedings{aardal2024labrador,
+  author    = {Marius A. Aardal and Diego F. Aranha and Katharina Boudgoust and Sebastian Kolby and Akira Takahashi},
+  title     = {Aggregating {Falcon} Signatures with {LaBRADOR}},
+  booktitle = {Advances in Cryptology -- CRYPTO 2024},
+  series    = {LNCS},
+  pages     = {71--106},
+  year      = {2024},
+  doi       = {10.1007/978-3-031-68376-3_3},
+  url       = {https://eprint.iacr.org/2024/311},
+  note      = {accessed 2026-11-15}
+}
+
+@misc{sanso2026falconagg,
+  author       = {Antonio Sanso and Thomas Thiery and Benedikt Wagner},
+  title        = {Revisiting {Falcon} signature aggregation for {PQ} mempools},
+  howpublished = {Ethereum Research forum, 18 March 2026},
+  year         = {2026},
+  url          = {https://ethresear.ch/t/revisiting-falcon-signature-aggregation-for-pq-mempools/24431},
+  note         = {accessed 2026-11-15}
+}
+
+@article{drake2025hashbased,
+  author  = {Justin Drake and Dmitry Khovratovich and Mikhail Kudinov and Benedikt Wagner},
+  title   = {Hash-Based Multi-Signatures for Post-Quantum {Ethereum}},
+  journal = {IACR Communications in Cryptology},
+  volume  = {2},
+  number  = {1},
+  year    = {2025},
+  doi     = {10.62056/aey7qjp10},
+  url     = {https://eprint.iacr.org/2025/055},
+  note    = {accessed 2026-11-15}
+}
+
+@misc{drake2025leansig,
+  author       = {Justin Drake and Dmitry Khovratovich and Mikhail Kudinov and Benedikt Wagner},
+  title        = {Technical Note: {LeanSig} for Post-Quantum {Ethereum}},
+  howpublished = {Cryptology ePrint Archive, Paper 2025/1332},
+  year         = {2025},
+  url          = {https://eprint.iacr.org/2025/1332},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{leanmultisig2026,
+  author       = {{leanEthereum}},
+  title        = {leanMultisig: Minimal hash-based {zkVM} for post-quantum {Ethereum}},
+  howpublished = {GitHub repository, MIT/Apache-2.0},
+  year         = {2026},
+  url          = {https://github.com/leanEthereum/leanMultisig},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{policharla2023pqprivacypass,
+  author       = {Guru-Vamsi Policharla and Bas Westerbaan and Armando Faz-Hern{\'a}ndez and Christopher A. Wood},
+  title        = {Post-Quantum Privacy Pass via Post-Quantum Anonymous Credentials},
+  howpublished = {Cryptology ePrint Archive, Paper 2023/414},
+  year         = {2023},
+  url          = {https://eprint.iacr.org/2023/414},
+  note         = {introduces zkDilithium; accessed 2026-11-15}
+}
+
+@misc{sie2026iotpq,
+  author       = {Ming-Fong Sie},
+  title        = {Post-Quantum Authentication of {IoT} Data on {Ethereum}: Signatures, the Calldata Floor, and Device-Signed {Merkle} Roots},
+  howpublished = {arXiv:2611.08108},
+  year         = {2026},
+  url          = {https://arxiv.org/abs/2611.08108},
+  note         = {preprint, 5 Nov 2026; accessed 2026-11-15}
+}
+
+@misc{lie2026domainpq,
+  author       = {Maja Lie and Ben Marsh},
+  title        = {Domain Specific Post Quantum Signatures for Blockchains},
+  howpublished = {arXiv:2609.24689},
+  year         = {2026},
+  url          = {https://arxiv.org/abs/2609.24689},
+  note         = {preprint; accessed 2026-11-15}
+}
+
+@misc{khodaiemehr2026niropok,
+  author       = {Hassan Khodaiemehr and Khadijeh Bagheri and Saeid Yazdinejad and Chen Feng},
+  title        = {{NIROPoK}-Based Post-Quantum Sidechain Design on {Ethereum}},
+  howpublished = {Cryptology ePrint Archive, Paper 2026/401},
+  year         = {2026},
+  url          = {https://eprint.iacr.org/2026/401},
+  note         = {Dilithium-secured bridge; accessed 2026-11-15}
+}
+
+@misc{eip4337,
+  author       = {Vitalik Buterin and Yoav Weiss and Dror Tirosh and Shahaf Nacson and Alex Forshtat and Kristof Gazso and Tjaden Hess},
+  title        = {{ERC-4337}: Account Abstraction Using Alt Mempool},
+  howpublished = {Ethereum Improvement Proposals, no. 4337 (Final)},
+  year         = {2021},
+  url          = {https://eips.ethereum.org/EIPS/eip-4337},
+  note         = {created 2021-09-29; accessed 2026-11-15}
+}
+
+@misc{rip7212,
+  author       = {Ula{\c{s}} Erdo{\u{g}}an and Do{\u{g}}an Alpaslan},
+  title        = {{RIP-7212}: Precompile for secp256r1 Curve Support},
+  howpublished = {Rollup Improvement Proposals, no. 7212 (Final)},
+  year         = {2023},
+  url          = {https://github.com/ethereum/RIPs/blob/master/RIPS/rip-7212.md},
+  note         = {3450 gas; accessed 2026-11-15}
+}
+
+@misc{eip7951,
+  author       = {Carl Beekhuizen and Ula{\c{s}} Erdo{\u{g}}an and Do{\u{g}}an Alpaslan},
+  title        = {{EIP-7951}: Precompile for secp256r1 Curve Support},
+  howpublished = {Ethereum Improvement Proposals, no. 7951 (Final)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-7951},
+  note         = {6900 gas at 0x100; included in Fusaka (EIP-7607); accessed 2026-11-15}
+}
+
+@misc{eip1108,
+  author       = {Antonio Salazar Cardozo and Zachary Williamson},
+  title        = {{EIP-1108}: Reduce alt\_bn128 precompile gas costs},
+  howpublished = {Ethereum Improvement Proposals, no. 1108 (Final)},
+  year         = {2018},
+  url          = {https://eips.ethereum.org/EIPS/eip-1108},
+  note         = {ECADD 150, ECMUL 6000, pairing 45000 + 34000k; Istanbul; accessed 2026-11-15}
+}
+
+@misc{eip7623,
+  author       = {Toni Wahrst{\"a}tter and Vitalik Buterin},
+  title        = {{EIP-7623}: Increase calldata cost},
+  howpublished = {Ethereum Improvement Proposals, no. 7623 (Final)},
+  year         = {2024},
+  url          = {https://eips.ethereum.org/EIPS/eip-7623},
+  note         = {included in Pectra (EIP-7600), mainnet 2025-05-07; accessed 2026-11-15}
+}
+
+@misc{eip7600,
+  author       = {{Ethereum core developers}},
+  title        = {{EIP-7600}: Hardfork Meta - {Pectra}},
+  howpublished = {Ethereum Improvement Proposals, no. 7600},
+  year         = {2024},
+  url          = {https://eips.ethereum.org/EIPS/eip-7600},
+  note         = {mainnet epoch 364032, timestamp 1746612311; author list not checked; accessed 2026-11-15}
+}
+
+@misc{eip7607,
+  author       = {{Ethereum core developers}},
+  title        = {{EIP-7607}: Hardfork Meta - {Fusaka}},
+  howpublished = {Ethereum Improvement Proposals, no. 7607},
+  year         = {2024},
+  url          = {https://eips.ethereum.org/EIPS/eip-7607},
+  note         = {includes EIP-7825, EIP-7935 (60M default gas limit), EIP-7951; mainnet 2025-12-03; author list not checked; accessed 2026-11-15}
+}
+
+@misc{eip7825,
+  author       = {Giulio Rebuffo and Toni Wahrst{\"a}tter},
+  title        = {{EIP-7825}: Transaction Gas Limit Cap},
+  howpublished = {Ethereum Improvement Proposals, no. 7825 (Final)},
+  year         = {2025},
+  url          = {https://eips.ethereum.org/EIPS/eip-7825},
+  note         = {cap $2^{24}$ = 16,777,216 gas; accessed 2026-11-15}
+}
+
+@misc{zksync2026aa,
+  author       = {{Matter Labs}},
+  title        = {Account Abstraction ({ZKsync} Era)},
+  howpublished = {ZKsync documentation},
+  year         = {2026},
+  url          = {https://docs.zksync.io/zksync-protocol/era-vm/account-abstraction},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{starknet2026accounts,
+  author       = {{Starknet}},
+  title        = {Accounts},
+  howpublished = {Starknet documentation},
+  year         = {2026},
+  url          = {https://docs.starknet.io/learn/protocol/accounts},
+  note         = {accessed 2026-11-15}
+}
+
+@inproceedings{micali2021compact,
+  author    = {Silvio Micali and Leonid Reyzin and Georgios Vlachos and Riad S. Wahby and Nickolai Zeldovich},
+  title     = {Compact Certificates of Collective Knowledge},
+  booktitle = {2021 IEEE Symposium on Security and Privacy (SP)},
+  pages     = {626--641},
+  year      = {2021},
+  doi       = {10.1109/SP40001.2021.00096},
+  url       = {https://doi.org/10.1109/SP40001.2021.00096},
+  note      = {basis of Algorand State Proofs; accessed 2026-11-15}
+}
+
+@misc{algorand2026stateproofs,
+  author       = {{Algorand Foundation}},
+  title        = {State Proofs},
+  howpublished = {Algorand developer documentation},
+  year         = {2026},
+  url          = {https://dev.algorand.co/concepts/protocol/state-proofs},
+  note         = {Falcon keys, 256-round interval; see also https://specs.algorand.co/crypto/crypto-falcon (Falcon-1024); accessed 2026-11-15}
+}
+
+@misc{qrl2026docs,
+  author       = {{The QRL Contributors}},
+  title        = {What is {QRL}},
+  howpublished = {QRL documentation},
+  year         = {2026},
+  url          = {https://docs.theqrl.org/what-is-qrl},
+  note         = {XMSS (RFC 8391, NIST SP 800-208); whitepaper for v1.x at https://github.com/theQRL/Whitepaper; accessed 2026-11-15}
+}
+
+@inproceedings{baldimtsi2024zklogin,
+  author    = {Foteini Baldimtsi and Konstantinos Kryptos Chalkias and Yan Ji and Jonas Lindstr{\o}m and Deepak Maram and Ben Riva and Arnab Roy and Mahdi Sedaghat and Joy Wang},
+  title     = {{zkLogin}: Privacy-Preserving Blockchain Authentication with Existing Credentials},
+  booktitle = {Proceedings of the 2024 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  pages     = {3182--3196},
+  year      = {2024},
+  doi       = {10.1145/3658644.3690356},
+  url       = {https://doi.org/10.1145/3658644.3690356},
+  note      = {accessed 2026-11-15}
+}
+
+@misc{cve202624850,
+  author       = {{MITRE / GitHub CNA}},
+  title        = {{CVE-2026-24850}: {ML-DSA} Signature Verification Accepts Signatures with Repeated Hint Indices},
+  howpublished = {CVE record; RustCrypto advisory GHSA-5x2r-hc65-25f9},
+  year         = {2026},
+  url          = {https://github.com/RustCrypto/signatures/security/advisories/GHSA-5x2r-hc65-25f9},
+  note         = {CWE-347, CVSS 3.1 5.3; ml-dsa crate >=0.0.4 <0.1.0-rc.4; accessed 2026-11-15}
+}
+
+@misc{aws2026g5pricing,
+  author       = {{Amazon Web Services}},
+  title        = {Amazon {EC2} On-Demand Pricing ({g5.xlarge}, {US} East (N. Virginia), Linux)},
+  howpublished = {AWS public price list, publication date 2026-11-14},
+  year         = {2026},
+  url          = {https://aws.amazon.com/ec2/pricing/on-demand/},
+  note         = {USD 1.006 per hour; accessed 2026-11-15}
+}
+
+@inproceedings{shor1994,
+  author    = {Peter W. Shor},
+  title     = {Algorithms for Quantum Computation: Discrete Logarithms and Factoring},
+  booktitle = {Proceedings 35th Annual Symposium on Foundations of Computer Science},
+  address   = {Santa Fe, NM, USA},
+  pages     = {124--134},
+  year      = {1994}
+}
+
+@techreport{fips204,
+  author      = {{National Institute of Standards and Technology}},
+  title       = {Module-Lattice-Based Digital Signature Standard},
+  institution = {NIST},
+  type        = {Federal Information Processing Standards Publication},
+  number      = {FIPS 204},
+  year        = {2024},
+  month       = aug,
+  doi         = {10.6028/NIST.FIPS.204}
+}
+
+@article{raikwar2019sok,
+  author  = {Mayank Raikwar and Danilo Gligoroski and Katina Kralevska},
+  title   = {{SoK} of Used Cryptography in Blockchain},
+  journal = {IEEE Access},
+  volume  = {7},
+  pages   = {148550--148575},
+  year    = {2019}
+}
+
+@misc{pqcryptomldsa,
+  author       = {{rustpq contributors}},
+  title        = {pqcrypto-mldsa 0.1.2: {ML-DSA} bindings to {PQClean}},
+  howpublished = {Rust crate},
+  year         = {2025},
+  url          = {https://crates.io/crates/pqcrypto-mldsa},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{revm,
+  author       = {{bluealloy contributors}},
+  title        = {revm: Rust implementation of the {Ethereum} Virtual Machine, version 14.0.3},
+  howpublished = {Rust crate},
+  year         = {2024},
+  url          = {https://github.com/bluealloy/revm},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{arkworks,
+  author       = {{arkworks contributors}},
+  title        = {arkworks: ark-groth16 0.4.0 and ark-bn254 0.4.0},
+  howpublished = {Rust crates},
+  year         = {2023},
+  url          = {https://github.com/arkworks-rs/groth16},
+  note         = {accessed 2026-11-15}
+}
+
+@misc{qevmrepo,
+  author       = {Mohit Anuragi and Srikanth Reddy},
+  title        = {{Q-EVM}: research prototype and experiment artefacts},
+  howpublished = {GitHub repository},
+  year         = {2026},
+  url          = {https://github.com/SanidhyaMadheshia/csd-Project},
+  note         = {branch costoptimised}
+}

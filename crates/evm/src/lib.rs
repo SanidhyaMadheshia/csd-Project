@@ -1,25 +1,40 @@
-//! Real on-chain cost measurement for Q-EVM.
+//! On-chain side of Q-EVM, measured on a real EVM (revm).
 //!
-//! * [`groth16`]: real Groth16 receipts over BN254 (arkworks).
+//! * [`groth16`]: Groth16 receipts over BN254 (arkworks) and exactly what they prove.
 //! * [`verifier`]: the Groth16 verifier contract as EVM bytecode.
-//! * [`executor`]: deploys and calls that verifier on revm and reports the
-//!   gas the EVM charges.
-//! * [`native_mldsa`]: meters what verifying ML-DSA-44 directly in the EVM
-//!   would cost, from the real key and signature.
+//! * [`wallet`]: the wallet / EntryPoint contract (key binding, nonces, op-hash
+//!   recomputation, batch digest) and the canonical op-hash definition.
+//! * [`attestation`]: ECDSA attestations for the ablation baseline.
+//! * [`executor`]: an in-process chain that deploys and calls these contracts
+//!   and reports the gas the EVM charges.
+//! * [`native_mldsa`]: an opcode-level *model* of verifying ML-DSA-44 directly
+//!   in the EVM (not an executed contract).
 
+mod asm;
+pub mod attestation;
 pub mod executor;
 pub mod groth16;
 pub mod native_mldsa;
 pub mod verifier;
+pub mod wallet;
 
-pub use executor::{calldata_gas, EvmError, EvmGasMeter, OnchainGas, TX_BASE_GAS};
-pub use groth16::{Groth16Error, Groth16Keys, ReceiptStatement, EVM_CALLDATA_LEN, NUM_PUBLIC_INPUTS};
+pub use attestation::Attester;
+pub use executor::{
+    calldata_gas, Deployment, EvmError, LocalChain, OnchainGas, TxOutcome, WalletKind, EVM_SPEC_NAME, TX_BASE_GAS,
+};
+pub use groth16::{
+    full_calldata, proof_bytes, Groth16Error, Groth16Keys, ReceiptStatement, EVM_CALLDATA_LEN, NUM_PUBLIC_INPUTS,
+};
 pub use native_mldsa::{estimate_native_gas, NativeGasBreakdown, NativeGasError};
+pub use wallet::{
+    batch_digest, keccak, user_op_hash, wallet_calldata, WalletOp, ATTESTATION_AUTH_LEN, GROTH16_AUTH_LEN,
+    MAX_BATCH, OP_RECORD_LEN,
+};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qevm_crypto::{MlDsaDilithium2, SignatureScheme};
+    use qevm_crypto::{MlDsa44, SignatureScheme};
 
     fn statement(tag: u8) -> ReceiptStatement {
         ReceiptStatement { digest: [tag; 32], program: [0xab; 32] }
@@ -28,7 +43,7 @@ mod tests {
     #[test]
     fn evm_verifier_accepts_valid_proof_and_rejects_tampering() {
         let keys = Groth16Keys::setup(7).expect("setup");
-        let meter = EvmGasMeter::new(keys.verifying_key()).expect("deploy");
+        let meter = LocalChain::new(keys.verifying_key(), [0xab; 32], [0x99; 20], 1).expect("deploy");
         let st = statement(0x11);
         let calldata = keys.prove(&st, 1).expect("prove");
         assert_eq!(calldata.len(), EVM_CALLDATA_LEN);
@@ -57,11 +72,11 @@ mod tests {
 
     #[test]
     fn native_meter_is_deterministic_and_consistent() {
-        let (pk, sk) = MlDsaDilithium2::keygen().expect("keygen");
+        let (pk, sk) = MlDsa44::keygen().expect("keygen");
         let msg = [0x42u8; 32];
-        let sig = MlDsaDilithium2::sign(&msg, &sk).expect("sign");
-        let pk = MlDsaDilithium2::pk_to_bytes(&pk);
-        let sig = MlDsaDilithium2::sig_to_bytes(&sig);
+        let sig = MlDsa44::sign(&msg, &sk).expect("sign");
+        let pk = MlDsa44::pk_to_bytes(&pk);
+        let sig = MlDsa44::sig_to_bytes(&sig);
 
         let a = estimate_native_gas(&pk, &sig, &msg).expect("meter");
         let b = estimate_native_gas(&pk, &sig, &msg).expect("meter");

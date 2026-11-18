@@ -9,7 +9,15 @@ use std::fmt;
 use thiserror::Error;
 use uuid::Uuid;
 
-pub use qevm_evm::{NativeGasBreakdown, OnchainGas};
+pub use qevm_evm::{
+    batch_digest, wallet_calldata, NativeGasBreakdown, OnchainGas, TxOutcome, WalletKind, WalletOp,
+};
+
+/// Batch digest of `ops`: `keccak256(opHash₁ ‖ … ‖ opHash_N)`.
+pub fn batch_digest_of(ops: &[UserOperation]) -> [u8; 32] {
+    let hashes: Vec<[u8; 32]> = ops.iter().map(|op| *op.op_hash().as_bytes()).collect();
+    batch_digest(&hashes)
+}
 
 // ---------------------------------------------------------------------------
 // Paper reference values (Table II / §V-B). These are *projections* from the
@@ -40,9 +48,17 @@ pub struct VerifierInfo {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BatchGas {
     pub size: usize,
+    pub kind: WalletKind,
+    /// Gas of the wallet transaction that carried the batch (included on-chain
+    /// if it was submitted, otherwise simulated).
     pub onchain_gas: OnchainGas,
+    /// `onchain_gas.total / size`, rounded (kept as an integer for the UI).
     pub amortized_gas_per_op: u64,
+    /// `onchain_gas.total / size`, exact.
+    pub gas_per_op: f64,
+    /// Time to produce the batch authorisation (Groth16 prove or ECDSA sign).
     pub prove_time_ms: f64,
+    pub included: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -309,13 +325,21 @@ pub struct ZkvmPublicInputs {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZkvmJournal {
+    /// Result of the off-chain FIPS 204 verification run by the bundler.
     pub is_valid: bool,
     pub program_id: String,
-    /// Wall-clock time spent generating the Groth16 proof.
+    /// Wall-clock time of the off-chain ML-DSA verification.
+    #[serde(default)]
+    pub mldsa_verify_ms: f64,
+    /// Wall-clock time spent generating the Groth16 proof (binding circuit only).
     pub prove_time_ms: f64,
-    /// Gas the EVM charged to verify this receipt's proof (measured on revm).
+    /// Gas of a single-op wallet transaction carrying this receipt (simulated
+    /// on revm; `success = false` if the account state does not allow it yet).
     pub onchain_gas: OnchainGas,
-    /// Metered gas of verifying this op's ML-DSA signature natively in the EVM.
+    /// Gas of calling the bare Groth16 verifier with this receipt.
+    #[serde(default)]
+    pub verifier_gas: OnchainGas,
+    /// Modelled gas of verifying this op's ML-DSA signature natively in the EVM.
     pub native_gas: NativeGasBreakdown,
 }
 
@@ -334,28 +358,44 @@ pub struct ZkvmReceipt {
 /// One Groth16 proof covering a whole batch (digest = keccak of the op hashes).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchReceipt {
+    /// `keccak256(opHash₁ ‖ … ‖ opHash_N)`, recomputed by the wallet on-chain.
     pub digest: OpHash,
+    pub kind: WalletKind,
+    /// Authorisation: 256-byte Groth16 proof or 96-byte ECDSA attestation.
     #[serde(with = "serde_bytes")]
     pub proof: Vec<u8>,
+    /// Full calldata of the wallet transaction (auth ‖ N ‖ op records).
+    #[serde(with = "serde_bytes")]
+    pub wallet_calldata: Vec<u8>,
     pub size: usize,
+    /// Simulated gas of the wallet transaction, before inclusion.
     pub onchain_gas: OnchainGas,
     pub amortized_gas_per_op: u64,
     pub prove_time_ms: f64,
+    /// Set once the transaction has been sent to the chain.
+    pub inclusion: Option<TxOutcome>,
 }
 
 impl BatchReceipt {
     pub fn gas(&self) -> BatchGas {
+        let gas = self.inclusion.map(|i| i.gas).unwrap_or(self.onchain_gas);
+        let per_op = gas.total as f64 / self.size.max(1) as f64;
         BatchGas {
             size: self.size,
-            onchain_gas: self.onchain_gas,
-            amortized_gas_per_op: self.amortized_gas_per_op,
+            kind: self.kind,
+            onchain_gas: gas,
+            amortized_gas_per_op: per_op.round() as u64,
+            gas_per_op: per_op,
             prove_time_ms: self.prove_time_ms,
+            included: self.inclusion.map(|i| i.committed).unwrap_or(false),
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserOperation {
+    /// The Q-EVM wallet / EntryPoint contract this op is for (domain separation).
+    pub wallet: Address,
     pub sender: Address,
     pub nonce: u64,
     pub chain_id: u64,
@@ -368,6 +408,7 @@ pub struct UserOperation {
 
 impl UserOperation {
     pub fn new(
+        wallet: Address,
         sender: Address,
         nonce: u64,
         chain_id: u64,
@@ -375,6 +416,7 @@ impl UserOperation {
         pqc_payload: PqcPayload,
     ) -> Result<Self, TypesError> {
         Ok(Self {
+            wallet,
             sender,
             nonce,
             chain_id,
@@ -385,16 +427,29 @@ impl UserOperation {
         })
     }
 
+    /// `keccak256(TAG ‖ chain_id ‖ wallet ‖ sender ‖ nonce ‖ keccak(call_data) ‖ keccak(pk))`,
+    /// each field one 32-byte word. The wallet contract recomputes exactly this
+    /// (see `qevm_evm::wallet`), and it is the message the user signs.
     pub fn op_hash(&self) -> OpHash {
-        let mut payload = Vec::with_capacity(128 + self.call_data.len());
-        payload.extend_from_slice(self.sender.as_bytes());
-        payload.extend_from_slice(&self.chain_id.to_be_bytes());
-        payload.extend_from_slice(&self.nonce.to_be_bytes());
-        payload.extend_from_slice(&(self.call_data.len() as u32).to_be_bytes());
-        payload.extend_from_slice(&self.call_data);
-        payload.extend_from_slice(&(self.pqc_payload.public_key.len() as u32).to_be_bytes());
-        payload.extend_from_slice(&self.pqc_payload.public_key);
-        OpHash::new(keccak256(&payload))
+        OpHash::new(self.to_wallet_op().op_hash(self.chain_id, self.wallet.as_bytes()))
+    }
+
+    pub fn pk_hash(&self) -> [u8; 32] {
+        keccak256(&self.pqc_payload.public_key)
+    }
+
+    pub fn call_data_hash(&self) -> [u8; 32] {
+        keccak256(&self.call_data)
+    }
+
+    /// The record the wallet receives for this op.
+    pub fn to_wallet_op(&self) -> WalletOp {
+        WalletOp {
+            sender: *self.sender.as_bytes(),
+            nonce: self.nonce,
+            call_data_hash: self.call_data_hash(),
+            pk_hash: self.pk_hash(),
+        }
     }
 
     pub fn with_receipt(mut self, receipt: ZkvmReceipt) -> Self {
@@ -408,11 +463,16 @@ pub struct BundlerBatch {
     pub batch_id: Uuid,
     pub created_at: u64,
     pub operations: Vec<UserOperation>,
-    pub batch_receipt: Option<BatchReceipt>,
+    /// One entry per wallet transaction: a single one in batch mode, one per
+    /// op in per-op mode.
+    pub transactions: Vec<BatchReceipt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserOperationHex {
+    /// Wallet contract address; the node's wallet is used when omitted.
+    #[serde(default)]
+    pub wallet: Option<String>,
     pub sender: String,
     pub nonce: u64,
     pub chain_id: u64,
@@ -422,7 +482,11 @@ pub struct UserOperationHex {
 }
 
 impl UserOperationHex {
-    pub fn to_user_op(&self) -> Result<UserOperation, TypesError> {
+    pub fn to_user_op(&self, default_wallet: Address) -> Result<UserOperation, TypesError> {
+        let wallet = match &self.wallet {
+            Some(w) => Address::from_hex(w)?,
+            None => default_wallet,
+        };
         let sender = Address::from_hex(&self.sender)?;
         let call_data = hex_decode(self.call_data.strip_prefix("0x").unwrap_or(&self.call_data))?;
         let public_key = hex_decode(self.public_key.strip_prefix("0x").unwrap_or(&self.public_key))?;
@@ -431,11 +495,12 @@ impl UserOperationHex {
             public_key,
             signature,
         };
-        UserOperation::new(sender, self.nonce, self.chain_id, call_data, payload)
+        UserOperation::new(wallet, sender, self.nonce, self.chain_id, call_data, payload)
     }
 
     pub fn from_user_op(op: &UserOperation) -> Self {
         Self {
+            wallet: Some(op.wallet.to_hex()),
             sender: op.sender.to_hex(),
             nonce: op.nonce,
             chain_id: op.chain_id,
@@ -458,8 +523,11 @@ mod tests {
             public_key: vec![1, 2, 3],
             signature: vec![4, 5, 6],
         };
-        let op = UserOperation::new(sender, 1, 1, vec![7, 8], payload).unwrap();
+        let op = UserOperation::new(Address::new([9; 20]), sender, 1, 1, vec![7, 8], payload).unwrap();
         assert_eq!(op.op_hash(), op.op_hash());
+        let mut other = op.clone();
+        other.wallet = Address::new([8; 20]);
+        assert_ne!(op.op_hash(), other.op_hash(), "wallet address is part of the op hash");
     }
 
     proptest! {

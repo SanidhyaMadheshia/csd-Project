@@ -23,14 +23,20 @@ pub trait Storage: Send + Sync {
     async fn mempool_len(&self) -> Result<usize, StorageError>;
     async fn store_receipt(&self, op_hash: OpHash, receipt: ZkvmReceipt) -> Result<(), StorageError>;
     async fn get_receipt(&self, op_hash: &OpHash) -> Result<Option<ZkvmReceipt>, StorageError>;
+    /// Whether `(sender, nonce)` was ever accepted (pending, in flight or included).
     async fn has_sender_nonce(&self, sender: &Address, nonce: u64) -> Result<bool, StorageError>;
+    /// Number of ops from `sender` still waiting in the mempool.
+    async fn pending_for_sender(&self, sender: &Address) -> Result<u64, StorageError>;
 }
 
 #[derive(Debug, Default)]
 struct InMemoryState {
     mempool: VecDeque<UserOperation>,
     receipts: HashMap<OpHash, ZkvmReceipt>,
-    sender_nonces: HashSet<(Address, u64)>,
+    /// Every `(sender, nonce)` ever accepted. Never pruned: an op that has
+    /// left the mempool (bundled or included) must not be accepted again.
+    seen_nonces: HashSet<(Address, u64)>,
+    pending: HashMap<Address, u64>,
 }
 
 #[derive(Clone, Default)]
@@ -55,7 +61,8 @@ impl Storage for InMemoryStorage {
         if state.mempool.len() >= self.max_mempool {
             return Err(StorageError::MempoolFull);
         }
-        state.sender_nonces.insert((op.sender, op.nonce));
+        state.seen_nonces.insert((op.sender, op.nonce));
+        *state.pending.entry(op.sender).or_default() += 1;
         state.mempool.push_back(op);
         Ok(())
     }
@@ -65,7 +72,9 @@ impl Storage for InMemoryStorage {
         let mut out = Vec::with_capacity(max);
         for _ in 0..max {
             if let Some(op) = state.mempool.pop_front() {
-                state.sender_nonces.remove(&(op.sender, op.nonce));
+                if let Some(n) = state.pending.get_mut(&op.sender) {
+                    *n = n.saturating_sub(1);
+                }
                 out.push(op);
             } else {
                 break;
@@ -97,6 +106,11 @@ impl Storage for InMemoryStorage {
 
     async fn has_sender_nonce(&self, sender: &Address, nonce: u64) -> Result<bool, StorageError> {
         let state = self.state.read().await;
-        Ok(state.sender_nonces.contains(&(*sender, nonce)))
+        Ok(state.seen_nonces.contains(&(*sender, nonce)))
+    }
+
+    async fn pending_for_sender(&self, sender: &Address) -> Result<u64, StorageError> {
+        let state = self.state.read().await;
+        Ok(state.pending.get(sender).copied().unwrap_or(0))
     }
 }

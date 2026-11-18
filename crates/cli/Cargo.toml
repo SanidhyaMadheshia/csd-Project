@@ -20,3 +20,4 @@ qevm-rpc = { path = "../rpc" }
 qevm-telemetry = { path = "../telemetry" }
 qevm-types = { path = "../types" }
 qevm-utils = { path = "../utils" }
+qevm-zkvm = { path = "../zkvm" }

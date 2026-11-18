@@ -1,4 +1,4 @@
-use qevm_crypto::{EcdsaSecp256k1, MlDsaDilithium2, SignatureScheme};
+use qevm_crypto::{EcdsaSecp256k1, MlDsa44, SignatureScheme};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
@@ -16,7 +16,7 @@ fn avg_ms(total: Duration, iters: u32) -> f64 {
 pub fn run_benchmarks(iters: u32) -> Vec<BenchRow> {
     let msg = b"qevm-benchmark-message";
 
-    let mldsa = bench_scheme::<MlDsaDilithium2>(msg, iters);
+    let mldsa = bench_scheme::<MlDsa44>(msg, iters);
     let ecdsa = bench_scheme::<EcdsaSecp256k1>(msg, iters);
 
     vec![mldsa, ecdsa]

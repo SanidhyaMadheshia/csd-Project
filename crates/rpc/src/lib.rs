@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
 };
 use qevm_core::{DemoOutcome, Node, NodeEvent, NodeStatus};
-use qevm_types::{GasAnalysis, OpHash, UserOperationHex};
+use qevm_types::{Address, GasAnalysis, OpHash, UserOperationHex};
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -51,6 +51,8 @@ struct HealthResponse {
 struct SubmitResponse {
     accepted: bool,
     op_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rejection: Option<String>,
 }
 
 pub fn router(node: Arc<Node>) -> Router {
@@ -59,6 +61,7 @@ pub fn router(node: Arc<Node>) -> Router {
         .route("/health", get(health))
         .route("/status", get(status))
         .route("/mempool", get(mempool))
+        .route("/accounts", post(register))
         .route("/user-operations", post(submit))
         .route("/receipts/:hash", get(receipt))
         .route("/events", get(events))
@@ -133,7 +136,7 @@ async fn submit(
     State(state): State<RpcState>,
     Json(payload): Json<UserOperationHex>,
 ) -> Result<Json<SubmitResponse>, RpcError> {
-    let op = payload.to_user_op().map_err(|e| RpcError::Node(e.to_string()))?;
+    let op = payload.to_user_op(state.node.wallet_address()).map_err(|e| RpcError::Node(e.to_string()))?;
     let outcome = state
         .node
         .submit_user_operation(op)
@@ -142,6 +145,39 @@ async fn submit(
     Ok(Json(SubmitResponse {
         accepted: outcome.accepted,
         op_hash: outcome.op_hash.to_hex(),
+        rejection: outcome.rejection.map(|r| r.to_string()),
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+struct RegisterRequest {
+    sender: String,
+    public_key: String,
+    #[serde(default)]
+    nonce: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct RegisterResponse {
+    sender: String,
+    wallet: String,
+    pk_hash: String,
+}
+
+/// POST /accounts {"sender", "public_key", "nonce"?}
+/// Registers an account in the wallet (stands in for the wallet's deployment).
+async fn register(
+    State(state): State<RpcState>,
+    Json(request): Json<RegisterRequest>,
+) -> Result<Json<RegisterResponse>, RpcError> {
+    let sender = Address::from_hex(&request.sender).map_err(|e| RpcError::Node(e.to_string()))?;
+    let pk = qevm_utils::hex_decode(request.public_key.strip_prefix("0x").unwrap_or(&request.public_key))
+        .map_err(|e| RpcError::Node(e.to_string()))?;
+    state.node.register_account(&sender, &pk, request.nonce);
+    Ok(Json(RegisterResponse {
+        sender: sender.to_hex(),
+        wallet: state.node.wallet_address().to_hex(),
+        pk_hash: format!("0x{}", qevm_utils::hex_encode(&qevm_utils::keccak256(&pk))),
     }))
 }
 
